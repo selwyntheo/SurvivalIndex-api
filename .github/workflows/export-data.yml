@@ -1,0 +1,67 @@
+name: Export Data to JSONL
+
+on:
+  # Run daily at 00:00 UTC
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+  
+  # Run after AI evaluations (triggered by webhook)
+  repository_dispatch:
+    types: [ai-evaluation-complete]
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      
+      - name: Export data to JSONL
+        run: |
+          node -e "
+          import('./src/services/exportService.js').then(async (module) => {
+            const exportService = module.default;
+            const result = await exportService.exportAll();
+            console.log('Export complete:', JSON.stringify(result, null, 2));
+            process.exit(0);
+          }).catch(err => {
+            console.error('Export failed:', err);
+            process.exit(1);
+          });
+          "
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code data/ || echo "changes=true" >> $GITHUB_OUTPUT
+      
+      - name: Commit and push if changes
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/
+          git commit -m "chore: auto-export data to JSONL [skip ci]"
+          git push

@@ -6,6 +6,7 @@ import ratingRoutes from './routes/ratings.js';
 import aiJudgeRoutes from './routes/ai-judge.js';
 import authRoutes from './routes/auth.js';
 import submissionRoutes from './routes/submissions.js';
+import exportRoutes from './routes/export.js';
 
 dotenv.config();
 
@@ -66,6 +67,14 @@ app.get('/', (req, res) => {
         approve: 'POST /api/submissions/:id/approve [ADMIN ONLY]',
         reject: 'POST /api/submissions/:id/reject (body: {rejectionReason}) [ADMIN ONLY]',
         delete: 'DELETE /api/submissions/:id [ADMIN ONLY]'
+      },
+      export: {
+        projects: 'GET /api/export/projects - Export all projects as JSONL',
+        aiRatings: 'GET /api/export/ai-ratings - Export AI ratings as JSONL',
+        communityRatings: 'GET /api/export/community-ratings - Export community ratings as JSONL',
+        submissions: 'GET /api/export/submissions - Export pending submissions as JSONL',
+        generate: 'POST /api/export/generate - Generate all exports [ADMIN ONLY]',
+        stats: 'GET /api/export/stats - Get export statistics'
       }
     },
     examples: {
@@ -83,6 +92,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/ai-judge', aiJudgeRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api/export', exportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
