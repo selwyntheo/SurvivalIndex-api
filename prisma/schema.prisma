@@ -1,0 +1,175 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  type          String   // 'open-source' | 'saas' | 'hybrid'
+  category      String
+  description   String
+  url           String?
+  githubUrl     String?
+  logo          String?  // emoji or image url
+  tags          String?  // comma-separated tags
+  yearCreated   Int?
+  
+  // New enhanced fields
+  selfHostable  Boolean  @default(false)  // Can be self-hosted
+  license       String?  // e.g., 'MIT', 'Apache-2.0', 'GPL-3.0', 'Proprietary'
+  techStack     String?  // comma-separated tech stack (e.g., 'Rust,PostgreSQL,React')
+  alternativeTo String?  // comma-separated list of alternatives (e.g., 'Redis,Memcached')
+
+  // AI-generated scores
+  aiRating    AIRating?
+
+  // Community ratings
+  userRatings UserRating[]
+
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([category])
+  @@index([selfHostable])
+}
+
+model AIRating {
+  id                    Int      @id @default(autoincrement())
+  projectId             Int      @unique
+  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // The 6 Survival Levers (0-10 scale)
+  insightCompression    Float
+  substrateEfficiency   Float
+  broadUtility          Float
+  awareness             Float
+  agentFriction         Float    // Lower is better (inverted in calculation)
+  humanCoefficient      Float
+
+  // Calculated score
+  survivalScore         Float
+  tier                  String   // S, A, B, C, D, F
+
+  // AI metadata
+  confidence            Float    // 0-1 confidence score
+  reasoning             Json     // Detailed reasoning for each lever
+  suggestions           Json?    // AI suggestions to improve survival score
+  model                 String   // e.g., "claude-sonnet-4-5"
+
+  // Analysis metadata
+  githubStars           Int?
+  githubForks           Int?
+  githubIssues          Int?
+  npmDownloads          Int?
+  documentationQuality  Float?
+
+  lastAnalyzedAt        DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([survivalScore])
+  @@index([tier])
+}
+
+model UserRating {
+  id                    Int      @id @default(autoincrement())
+  projectId             Int
+  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // The 6 Survival Levers (0-10 scale)
+  insightCompression    Float
+  substrateEfficiency   Float
+  broadUtility          Float
+  awareness             Float
+  agentFriction         Float
+  humanCoefficient      Float
+
+  // Optional user identification
+  userId                String?
+  ipAddress             String?
+
+  createdAt             DateTime @default(now())
+
+  @@index([projectId])
+  @@index([userId])
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  passwordHash  String
+  role          String    @default("user") // 'admin' | 'user'
+  name          String?
+
+  sessions      Session[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id            String    @id @default(uuid())
+  userId        Int
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token         String    @unique
+  expiresAt     DateTime
+
+  createdAt     DateTime  @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+model ProjectSubmission {
+  id            Int       @id @default(autoincrement())
+  
+  // Project details
+  name          String
+  type          String    // 'open-source' | 'saas' | 'hybrid'
+  category      String
+  description   String
+  url           String?
+  githubUrl     String?
+  logo          String?   // emoji or image url
+  tags          String?   // comma-separated tags
+  yearCreated   Int?
+  
+  // Enhanced fields
+  selfHostable  Boolean   @default(false)
+  license       String?
+  techStack     String?
+  alternativeTo String?
+  
+  // Submission metadata
+  status        String    @default("pending") // 'pending' | 'approved' | 'rejected'
+  submittedBy   String?   // Email or name of submitter
+  submitterEmail String?
+  
+  // Admin review
+  reviewedBy    Int?
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  rejectionReason String?
+  
+  // If approved, link to created project
+  projectId     Int?      @unique
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
