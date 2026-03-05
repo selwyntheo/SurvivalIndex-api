@@ -36,7 +36,8 @@ class ProjectService {
       where,
       include: {
         aiRating: true,
-        userRatings: true
+        userRatings: true,
+        aasScores: { orderBy: { computedAt: 'desc' }, take: 1 },
       },
       orderBy: {
         createdAt: 'desc'

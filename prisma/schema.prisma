@@ -34,6 +34,24 @@ model Project {
   // Community ratings
   userRatings UserRating[]
 
+  // ACES (Agent Choice Evaluation System)
+  acesObservations    AcesObservation[]
+  acesMetric          AcesMetric?
+
+  // SFI-v3 scores
+  survivalScores      ToolSurvivalScore[]
+
+  // MCP v2.0 relations
+  health              ProjectHealth?
+  integrations        Integration[]
+  compositionComponents CompositionComponent[]
+  communityOverrides  CommunityOverride[]
+
+  // AAS (Agent Awareness Score)
+  toolExtractions     ToolExtraction[]
+  expertEvaluations   ExpertEvaluation[]
+  aasScores           AasScore[]
+
   // Metadata
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -55,6 +73,16 @@ model AIRating {
   awareness             Float
   agentFriction         Float    // Lower is better (inverted in calculation)
   humanCoefficient      Float
+  acesScore             Float?   // 7th lever: Agent Choice Evaluation (0-10)
+
+  // MCP v2.0: Evidence for each lever
+  insightEvidence       String?
+  substrateEvidence     String?
+  utilityEvidence       String?
+  awarenessEvidence     String?
+  agentEvidence         String?
+  humanEvidence         String?
+  acesEvidence          String?
 
   // Calculated score
   survivalScore         Float
@@ -65,6 +93,8 @@ model AIRating {
   reasoning             Json     // Detailed reasoning for each lever
   suggestions           Json?    // AI suggestions to improve survival score
   model                 String   // e.g., "claude-sonnet-4-5"
+  dataSources           String[] // Data sources used for scoring
+  humanReviewed         Boolean  @default(false)
 
   // Analysis metadata
   githubStars           Int?
@@ -86,13 +116,14 @@ model UserRating {
   projectId             Int
   project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  // The 6 Survival Levers (0-10 scale)
+  // The 7 Survival Levers (0-10 scale)
   insightCompression    Float
   substrateEfficiency   Float
   broadUtility          Float
   awareness             Float
   agentFriction         Float
   humanCoefficient      Float
+  acesScore             Float?
 
   // Optional user identification
   userId                String?
@@ -172,4 +203,354 @@ model ProjectSubmission {
 
   @@index([status])
   @@index([createdAt])
+}
+
+// MCP v2.0 Models
+
+model ProjectHealth {
+  projectId           Int       @id
+  project             Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  lastCommitDate      DateTime?
+  commitFrequency30d  Int?
+  openIssues          Int?
+  closedIssuesRatio   Float?
+  lastReleaseDate     DateTime?
+  contributorCount    Int?
+  healthStatus        String    @default("active") // 'active' | 'slowing' | 'maintenance-only' | 'abandoned'
+  alerts              String[]
+  
+  lastChecked         DateTime  @default(now())
+  
+  @@index([healthStatus])
+}
+
+model Integration {
+  id                  Int       @id @default(autoincrement())
+  projectId           Int
+  project             Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  techStack           String    // 'java', 'spring-boot', 'python', 'kubernetes'
+  integrationType     String?   // 'native-library' | 'official-plugin' | 'community' | 'rest-api'
+  setupComplexity     String?   // 'one-liner' | 'config-only' | 'moderate' | 'significant'
+  documentationUrl    String?
+  quickStart          String?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  @@unique([projectId, techStack])
+  @@index([techStack])
+  @@index([projectId])
+}
+
+model Composition {
+  id                    String              @id
+  name                  String
+  useCase               String
+  replaces              String[]
+  deploymentComplexity  String?
+  documentationUrl      String?
+  
+  components            CompositionComponent[]
+  
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+}
+
+model CompositionComponent {
+  compositionId   String
+  composition     Composition @relation(fields: [compositionId], references: [id], onDelete: Cascade)
+  
+  projectId       Int
+  project         Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  role            String      // 'Metrics collection & alerting'
+  required        Boolean     @default(true)
+  alternatives    String[]
+  
+  @@id([compositionId, projectId])
+  @@index([compositionId])
+}
+
+model ReinventionCost {
+  category                String    @id
+  typicalBuildTime        String?
+  commonMissedEdgeCases   String[]
+  knowledgeYears          Int?
+  historicalFailures      String[]
+  estimatedCostRatio      String?
+  
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+model CommunityOverride {
+  id              Int       @id @default(autoincrement())
+  projectId       Int
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  lever           String
+  originalScore   Float
+  overrideScore   Float
+  justification   String
+  submittedBy     String?
+  votes           Int       @default(0)
+  status          String    @default("pending") // 'pending' | 'approved' | 'rejected'
+
+  createdAt       DateTime  @default(now())
+
+  @@index([projectId])
+}
+
+// ACES (Agent Choice Evaluation System) Models
+
+model AcesObservation {
+  id                Int       @id @default(autoincrement())
+  projectId         Int
+  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  agentName         String    // e.g., 'claude-code', 'cursor', 'copilot'
+  promptCategory    String    // e.g., 'database', 'web-server', 'cache'
+  promptText        String?   // The actual prompt used (optional)
+  wasChosen         Boolean   // Did the agent choose this project?
+  alternativeChosen String?   // What was chosen instead, if not this project
+  wasCustomDIY      Boolean   @default(false) // Did the agent build custom instead?
+
+  // Expert review fields
+  expertAgreed      Boolean?  // Did the expert agree with the agent's choice?
+  expertReviewedBy  String?
+  expertReviewedAt  DateTime?
+
+  sessionId         String?   // Optional session tracking
+  source            String?   // e.g., 'mcp', 'api', 'manual'
+
+  // SFI-v3 extended fields
+  alternatives      Json?     // [{tool, reason}] — alternatives considered
+  mentions          Json?     // tool names mentioned in session
+  extractionConfidence Float? // 0-1 confidence in extraction accuracy
+  retryCount        Int       @default(0)
+  implementationSucceeded Boolean?
+  abandoned         Boolean   @default(false)
+  repoType          String?   // frontend/backend/fullstack/cli
+  modelName         String?   // model used by the agent
+
+  // Relations
+  choiceScores      ChoiceScoreRecord[]
+
+  createdAt         DateTime  @default(now())
+
+  @@index([projectId])
+  @@index([agentName])
+  @@index([promptCategory])
+  @@index([createdAt])
+}
+
+model AcesMetric {
+  id                    Int       @id @default(autoincrement())
+  projectId             Int       @unique
+  project               Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  agentPickRate         Float     // 0-1: How often agents choose this project
+  survivalAlignment     Float     // 0-1: Correlation between pick rate and survival score
+  customDIYRate         Float     // 0-1: How often agents build custom instead
+  expertAgreementRate   Float     // 0-1: How often experts agree with agent choice
+  phrasingStability     Float     // 0-1: Consistency across different prompt phrasings
+
+  totalObservations     Int
+  lastAggregatedAt      DateTime
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+// SFI-v3 Models
+
+model ToolSurvivalScore {
+  id              String    @id @default(uuid())
+  toolId          Int
+  tool            Project   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  categoryId      String    // category slug e.g. 'databases'
+  computedAt      DateTime  @default(now())
+
+  // 5 formula inputs (1-10 scale)
+  savingsScore        Float
+  usageScore          Float
+  humanScore          Float
+  awarenessCost       Float
+  frictionCost        Float
+
+  // Weights used for this computation
+  weightSavings       Float   @default(1.0)
+  weightUsage         Float   @default(0.8)
+  weightHuman         Float   @default(0.6)
+  weightAwareness     Float   @default(1.0)
+  weightFriction      Float   @default(1.0)
+
+  // Computed outputs
+  survivalRatio       Float   // exp(logRatio)
+  survivalScore       Float   // 0-100 score
+  survivalTier        String  // legendary/strong/competitive/pressured/endangered
+
+  // Data quality
+  dataPoints          Int     @default(0)
+  confidence          Float   @default(0) // 0-1
+
+  // ACES metrics snapshot
+  pickRate                    Float?
+  visibilityRate              Float?
+  customDiyRateInCategory     Float?
+  expertEndorsementRate       Float?
+
+  // Awareness cost detail (per-model breakdown)
+  visibilityByModel           Json?   // { "claude-code": 0.85, "cursor": 0.62, ... }
+  awarenessDetail             Json?   // { visibilityRate, crossModelConsistency, correctUsageRate, signals }
+
+  // Tier thresholds used for this computation
+  tierThresholds      Json?
+
+  @@unique([toolId, categoryId, computedAt])
+  @@index([toolId])
+  @@index([categoryId])
+  @@index([survivalScore])
+  @@index([survivalTier])
+  @@index([computedAt])
+}
+
+model ChoiceScoreRecord {
+  id                  String    @id @default(uuid())
+  extractionId        Int
+  extraction          AcesObservation @relation(fields: [extractionId], references: [id], onDelete: Cascade)
+  computedAt          DateTime  @default(now())
+
+  overallScore        Float     // 0-100 composite
+  survivalAlignment   Float     // 0-100
+  expertEndorsement   Float     // 0-100
+  contextFit          Float     // 0-100
+  consistency         Float     // 0-100
+  reasoningQuality    Float     // 0-100
+
+  flags               Json?     // e.g. {blindEval: true, multiModel: true}
+
+  @@index([extractionId])
+  @@index([computedAt])
+}
+
+model TierThreshold {
+  id              String    @id @default(uuid())
+  computedAt      DateTime  @default(now())
+  tier            String    // legendary/strong/competitive/pressured/endangered
+  percentileFloor Float     // e.g. 95, 75, 40, 15, 0
+  scoreMin        Float
+  scoreMax        Float
+  toolCount       Int
+
+  @@index([computedAt])
+  @@index([tier])
+}
+
+model WeightCalibration {
+  id              String    @id @default(uuid())
+  calibratedAt    DateTime  @default(now())
+  wSavings        Float
+  wUsage          Float
+  wHuman          Float
+  wAwareness      Float
+  wFriction       Float
+  trainingSamples Int       @default(0)
+  accuracy        Float?
+  notes           String?
+
+  @@index([calibratedAt])
+}
+
+// AAS (Agent Awareness Score) Models
+
+model AgentExecution {
+  id              String    @id @default(uuid())
+  agentName       String    // claude-code, cursor, copilot, aider
+  modelName       String    // claude-opus-4-6, gpt-4o, etc.
+  repositoryType  String    // nextjs-saas, fastapi-api, react-spa, cli-tool
+  categoryId      String
+  promptType      String    // need_based, ecosystem_adjacent, consideration
+  promptText      String
+  responseText    String?
+  executionTimeMs Int?
+  createdAt       DateTime  @default(now())
+
+  extraction      ToolExtraction?
+
+  @@index([agentName, modelName])
+  @@index([categoryId])
+  @@index([promptType])
+  @@index([createdAt])
+}
+
+model ToolExtraction {
+  id              String          @id @default(uuid())
+  executionId     String          @unique
+  execution       AgentExecution  @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  primaryToolId   Int?
+  primaryTool     Project?        @relation(fields: [primaryToolId], references: [id], onDelete: SetNull)
+  isCustomDiy     Boolean         @default(false)
+  reasoning       String?
+  confidence      Float?          // 0-1
+  considerationSet Json?          // [{tool_id, sentiment, rank, normalized_score}]
+  createdAt       DateTime        @default(now())
+
+  @@index([primaryToolId])
+  @@index([executionId])
+}
+
+model ExpertEvaluation {
+  id                  String    @id @default(uuid())
+  toolId              Int
+  tool                Project   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  categoryId          String
+  evaluatorId         String
+  wouldYouUse         String    // yes, no, depends
+  contextNotes        String?
+  appropriateness     Int?      // 1-5
+  productionReadiness Int?      // 1-5
+  longTermViability   Int?      // 1-5
+  createdAt           DateTime  @default(now())
+
+  @@index([toolId])
+  @@index([categoryId])
+  @@index([evaluatorId])
+}
+
+model AasScore {
+  id              String    @id @default(uuid())
+  toolId          Int
+  tool            Project   @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  categoryId      String
+  computedAt      DateTime  @default(now())
+
+  // Composite score
+  aas                     Float     // 0-100
+
+  // Sub-signals
+  unpromptedPickRate      Float?    // Need-based pick %
+  ecosystemPickRate       Float?    // Ecosystem-adjacent pick %
+  considerationRate       Float?    // Consideration appearance %
+  contextBreadth          Int?      // 0-4 repo types
+  crossModelConsistency   Float?    // 0-1
+
+  // Expert comparison
+  expertPreference        Float?    // % would_you_use = yes
+  hiddenGemGap            Float?    // expert_preference - aas
+  hiddenGemClass          String?   // strong_hidden_gem, mild_hidden_gem, aligned, mildly_overhyped, overhyped
+
+  // Per-model breakdown
+  modelScores             Json?     // [{model_id, pick_rate, knows_tool}]
+
+  // Data quality
+  dataPoints              Int       @default(0)
+  confidence              Float     @default(0) // 0-1
+
+  @@unique([toolId, categoryId, computedAt])
+  @@index([toolId])
+  @@index([categoryId])
+  @@index([aas])
+  @@index([computedAt])
 }

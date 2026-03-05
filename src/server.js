@@ -7,6 +7,9 @@ import aiJudgeRoutes from './routes/ai-judge.js';
 import authRoutes from './routes/auth.js';
 import submissionRoutes from './routes/submissions.js';
 import exportRoutes from './routes/export.js';
+import acesRoutes from './routes/aces.js';
+import sfiRoutes from './routes/sfi.js';
+import aasRoutes from './routes/aas.js';
 
 dotenv.config();
 
@@ -75,6 +78,37 @@ app.get('/', (req, res) => {
         submissions: 'GET /api/export/submissions - Export pending submissions as JSONL',
         generate: 'POST /api/export/generate - Generate all exports [ADMIN ONLY]',
         stats: 'GET /api/export/stats - Get export statistics'
+      },
+      aces: {
+        submitObservation: 'POST /api/aces/observations (body: {projectId, agentName, promptCategory, wasChosen, ...})',
+        getMetrics: 'GET /api/aces/metrics/:projectId',
+        getAllMetrics: 'GET /api/aces/metrics',
+        expertReview: 'POST /api/aces/observations/:id/review [ADMIN ONLY]',
+        aggregateProject: 'POST /api/aces/aggregate/:projectId [ADMIN ONLY]',
+        aggregateAll: 'POST /api/aces/aggregate [ADMIN ONLY]'
+      },
+      sfi: {
+        toolLeaderboard: 'GET /api/sfi/leaderboard/tools?category=databases',
+        categoryLeaderboard: 'GET /api/sfi/leaderboard/categories',
+        agentLeaderboard: 'GET /api/sfi/leaderboard/agents',
+        toolDetail: 'GET /api/sfi/tool/:toolName?category=databases',
+        tiers: 'GET /api/sfi/tiers',
+        categories: 'GET /api/sfi/categories',
+        version: 'GET /api/sfi/version',
+        compute: 'POST /api/sfi/compute [ADMIN ONLY]'
+      },
+      aas: {
+        leaderboard: 'GET /api/aas/leaderboard',
+        categoryLeaderboard: 'GET /api/aas/leaderboard/:category',
+        toolDetail: 'GET /api/aas/tool/:toolName?category=databases',
+        toolModels: 'GET /api/aas/tool/:toolName/models',
+        hiddenGems: 'GET /api/aas/hidden-gems',
+        categoryHiddenGems: 'GET /api/aas/hidden-gems/:category',
+        categories: 'GET /api/aas/categories',
+        version: 'GET /api/aas/version',
+        compute: 'POST /api/aas/compute [ADMIN ONLY]',
+        recordExecution: 'POST /api/aas/executions',
+        submitExpertEval: 'POST /api/aas/expert-evaluations'
       }
     },
     examples: {
@@ -93,6 +127,9 @@ app.use('/api/ratings', ratingRoutes);
 app.use('/api/ai-judge', aiJudgeRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/aces', acesRoutes);
+app.use('/api/sfi', sfiRoutes);
+app.use('/api/aas', aasRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
