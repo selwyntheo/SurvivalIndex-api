@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -93,7 +93,7 @@ model AIRating {
   reasoning             Json     // Detailed reasoning for each lever
   suggestions           Json?    // AI suggestions to improve survival score
   model                 String   // e.g., "claude-sonnet-4-5"
-  dataSources           String[] // Data sources used for scoring
+  dataSources           String?  // JSON-encoded array of data sources
   humanReviewed         Boolean  @default(false)
 
   // Analysis metadata
@@ -218,7 +218,7 @@ model ProjectHealth {
   lastReleaseDate     DateTime?
   contributorCount    Int?
   healthStatus        String    @default("active") // 'active' | 'slowing' | 'maintenance-only' | 'abandoned'
-  alerts              String[]
+  alerts              String?   // JSON-encoded array
   
   lastChecked         DateTime  @default(now())
   
@@ -248,7 +248,7 @@ model Composition {
   id                    String              @id
   name                  String
   useCase               String
-  replaces              String[]
+  replaces              String?   // JSON-encoded array
   deploymentComplexity  String?
   documentationUrl      String?
   
@@ -267,7 +267,7 @@ model CompositionComponent {
   
   role            String      // 'Metrics collection & alerting'
   required        Boolean     @default(true)
-  alternatives    String[]
+  alternatives    String?    // JSON-encoded array
   
   @@id([compositionId, projectId])
   @@index([compositionId])
@@ -276,9 +276,9 @@ model CompositionComponent {
 model ReinventionCost {
   category                String    @id
   typicalBuildTime        String?
-  commonMissedEdgeCases   String[]
+  commonMissedEdgeCases   String?  // JSON-encoded array
   knowledgeYears          Int?
-  historicalFailures      String[]
+  historicalFailures      String?  // JSON-encoded array
   estimatedCostRatio      String?
   
   createdAt               DateTime  @default(now())

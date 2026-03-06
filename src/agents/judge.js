@@ -20,12 +20,13 @@ class AIJudge {
   constructor() {
     this.model = 'claude-sonnet-4-5-20250929';
     this.weights = {
-      insightCompression: 0.20,    // 20%
-      substrateEfficiency: 0.18,   // 18%
-      broadUtility: 0.22,          // 22%
-      awareness: 0.15,             // 15%
-      agentFriction: 0.15,         // 15%
-      humanCoefficient: 0.10       // 10%
+      insightCompression: 0.18,    // 18%
+      substrateEfficiency: 0.16,   // 16%
+      broadUtility: 0.20,          // 20%
+      awareness: 0.13,             // 13%
+      agentFriction: 0.13,         // 13%
+      humanCoefficient: 0.09,      // 9%
+      acesScore: 0.11              // 11%
     };
   }
 
@@ -172,6 +173,7 @@ class AIJudge {
     let awareness = 6.5 + Math.random() * 2.5;
     let agentFriction = 7.0 + Math.random() * 2;
     let humanCoefficient = 6.5 + Math.random() * 2.5;
+    let acesScore = 5.0 + Math.random() * 3;
 
     // Boost scores for well-known projects
     const famousProjects = ['PostgreSQL', 'Git', 'Redis', 'Docker', 'Kubernetes', 'SQLite'];
@@ -179,6 +181,7 @@ class AIJudge {
       insightCompression += 1.5;
       awareness += 2.0;
       broadUtility += 1.5;
+      acesScore += 2.0;
     }
 
     // Boost for old, established projects
@@ -191,6 +194,7 @@ class AIJudge {
     if (type === 'open-source') {
       awareness += 0.5;
       agentFriction += 0.5;
+      acesScore += 1.0;
     }
 
     // Boost based on GitHub stars
@@ -205,7 +209,8 @@ class AIJudge {
       broadUtility: Math.min(10, parseFloat(broadUtility.toFixed(1))),
       awareness: Math.min(10, parseFloat(awareness.toFixed(1))),
       agentFriction: Math.min(10, parseFloat(agentFriction.toFixed(1))),
-      humanCoefficient: Math.min(10, parseFloat(humanCoefficient.toFixed(1)))
+      humanCoefficient: Math.min(10, parseFloat(humanCoefficient.toFixed(1))),
+      acesScore: Math.min(10, parseFloat(acesScore.toFixed(1)))
     };
 
     // Find lowest scoring levers for targeted suggestions
@@ -223,6 +228,7 @@ class AIJudge {
         awareness: `Well-known in the ${category} space${githubData ? ` with ${githubData.stars} GitHub stars` : ''}. Score: ${scores.awareness}/10`,
         agentFriction: `${type === 'open-source' ? 'Open source with good' : 'Commercial with decent'} API/programmatic access. Score: ${scores.agentFriction}/10`,
         humanCoefficient: `Developers ${yearCreated && yearCreated < 2010 ? 'have long trusted' : 'appreciate'} this tool. Score: ${scores.humanCoefficient}/10`,
+        acesScore: `AI coding agents ${scores.acesScore >= 7 ? 'frequently choose' : 'sometimes consider'} ${name} when solving ${category} problems. Score: ${scores.acesScore}/10`,
         overall: `${name} shows strong survival characteristics as a ${category} solution. ${yearCreated ? `Established in ${yearCreated}.` : ''} Predicted to remain relevant in the AI era.`
       },
       suggestions: {
@@ -251,7 +257,7 @@ class AIJudge {
 
     return `You are an AI Judge for SurvivalIndex.org, a platform that rates software's likelihood of survival in the AI era.
 
-Your task is to evaluate the software project "${name}" across 6 critical survival levers and provide scores from 0-10 for each.
+Your task is to evaluate the software project "${name}" across 7 critical survival levers and provide scores from 0-10 for each.
 
 ## PROJECT INFORMATION
 
@@ -277,39 +283,39 @@ ${githubData ? `
 - **Topics:** ${githubData.topics?.join(', ') || 'None'}
 ` : ''}
 
-## THE 6 SURVIVAL LEVERS
+## THE 7 SURVIVAL LEVERS
 
 Evaluate each lever on a scale of 0-10:
 
-### 1. Insight Compression (Weight: 20%)
+### 1. Insight Compression (Weight: 18%)
 **Definition:** The density of crystallized, hard-won knowledge encoded in the software.
 - How much deep, specialized knowledge is embedded?
 - Is this knowledge difficult to recreate?
 - Does it capture years of domain expertise?
 **Examples:** PostgreSQL (9.5), Git (9.2), Redis (8.8)
 
-### 2. Substrate Efficiency (Weight: 18%)
+### 2. Substrate Efficiency (Weight: 16%)
 **Definition:** How efficiently it runs on commodity hardware vs. requiring specialized resources.
 - CPU-friendly = higher score
 - GPU-dependent = lower score
 - Consider memory, storage, and compute requirements
 **Examples:** SQLite (9.8), VS Code (8.5), TensorFlow (5.2)
 
-### 3. Broad Utility (Weight: 22%)
+### 3. Broad Utility (Weight: 20%)
 **Definition:** Cross-domain applicability and versatility.
 - Can it be used across multiple industries/use-cases?
 - Is it a general-purpose tool or niche-specific?
 - Does it solve fundamental vs. specialized problems?
 **Examples:** Python (9.7), PostgreSQL (9.5), Stripe (8.9)
 
-### 4. Awareness/Publicity (Weight: 15%)
+### 4. Awareness/Publicity (Weight: 13%)
 **Definition:** Discoverability and mindshare in the developer ecosystem.
 - GitHub stars, community size, brand recognition
 - Documentation quality and accessibility
 - Presence in tutorials, courses, and discussions
 **Examples:** React (9.8), Docker (9.5), Tailwind (8.7)
 
-### 5. Agent Friction (Weight: 15%)
+### 5. Agent Friction (Weight: 13%)
 **Definition:** How easy it is for AI agents to use/integrate (LOWER is better, but score HIGH for low friction).
 - API quality: RESTful, well-documented, consistent
 - Programmatic access: SDKs, clear interfaces
@@ -317,12 +323,19 @@ Evaluate each lever on a scale of 0-10:
 **Scoring:** Low friction (easy for agents) = HIGH score (8-10), High friction = LOW score (2-4)
 **Examples:** Stripe (9.5), PostgreSQL (9.0), Photoshop (3.5)
 
-### 6. Human Coefficient (Weight: 10%)
+### 6. Human Coefficient (Weight: 9%)
 **Definition:** Enduring human preference and irreplaceable human value.
 - Do humans *prefer* this over alternatives?
 - Does it match human cognitive models/workflows?
 - Is there emotional attachment or brand loyalty?
 **Examples:** Git (9.0), Notion (8.5), Figma (8.8)
+
+### 7. ACES - Agent Choice Evaluation (Weight: 11%)
+**Definition:** How often AI coding agents actually choose this tool when given open-ended prompts.
+- When an agent is asked to solve a problem in this category, does it reach for this tool?
+- Is this the default/go-to choice for AI agents in this domain?
+- Do agents prefer this over building custom solutions or picking alternatives?
+**Examples:** PostgreSQL (9.3), Git (9.5), Redis (8.5), SQLite (9.0)
 
 ## OUTPUT FORMAT
 
@@ -336,7 +349,8 @@ Respond ONLY with valid JSON in this exact format:
     "broadUtility": 9.0,
     "awareness": 8.8,
     "agentFriction": 7.5,
-    "humanCoefficient": 8.0
+    "humanCoefficient": 8.0,
+    "acesScore": 7.5
   },
   "confidence": 0.85,
   "reasoning": {
@@ -346,6 +360,7 @@ Respond ONLY with valid JSON in this exact format:
     "awareness": "Brief explanation of score...",
     "agentFriction": "Brief explanation of score...",
     "humanCoefficient": "Brief explanation of score...",
+    "acesScore": "Brief explanation of score...",
     "overall": "Overall survival assessment in 2-3 sentences..."
   },
   "suggestions": {
@@ -393,6 +408,11 @@ Respond ONLY with valid JSON in this exact format:
         throw new Error('Invalid response structure from Claude');
       }
 
+      // Fallback acesScore to 5.0 if Claude omits it
+      if (parsed.scores.acesScore === undefined) {
+        parsed.scores.acesScore = 5.0;
+      }
+
       return parsed;
     } catch (error) {
       console.error('Failed to parse Claude response:', error);
@@ -411,7 +431,8 @@ Respond ONLY with valid JSON in this exact format:
       scores.broadUtility * this.weights.broadUtility +
       scores.awareness * this.weights.awareness +
       scores.agentFriction * this.weights.agentFriction +
-      scores.humanCoefficient * this.weights.humanCoefficient;
+      scores.humanCoefficient * this.weights.humanCoefficient +
+      (scores.acesScore || 0) * this.weights.acesScore;
 
     return weightedSum;
   }

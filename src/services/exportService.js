@@ -82,6 +82,7 @@ class ExportService {
         awareness: rating.awareness,
         agentFriction: rating.agentFriction,
         humanCoefficient: rating.humanCoefficient,
+        acesScore: rating.acesScore,
         survivalScore: rating.survivalScore,
         tier: rating.tier,
         confidence: rating.confidence,
@@ -130,6 +131,7 @@ class ExportService {
         awareness: rating.awareness,
         agentFriction: rating.agentFriction,
         humanCoefficient: rating.humanCoefficient,
+        acesScore: rating.acesScore,
         userId: rating.userId,
         createdAt: rating.createdAt.toISOString()
       };

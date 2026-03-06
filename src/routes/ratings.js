@@ -17,6 +17,7 @@ router.post('/', async (req, res, next) => {
       awareness,
       agentFriction,
       humanCoefficient,
+      acesScore,
       userId
     } = req.body;
 
@@ -27,7 +28,8 @@ router.post('/', async (req, res, next) => {
       broadUtility,
       awareness,
       agentFriction,
-      humanCoefficient
+      humanCoefficient,
+      ...(acesScore !== undefined ? [acesScore] : [])
     ];
 
     for (const score of scores) {
@@ -57,6 +59,7 @@ router.post('/', async (req, res, next) => {
         awareness,
         agentFriction,
         humanCoefficient,
+        acesScore: acesScore !== undefined ? acesScore : null,
         userId,
         ipAddress: req.ip
       }
@@ -108,13 +111,17 @@ router.get('/:projectId/average', async (req, res, next) => {
       });
     }
 
+    const acesRatings = ratings.filter(r => r.acesScore !== null);
     const averages = {
       insightCompression: ratings.reduce((sum, r) => sum + r.insightCompression, 0) / ratings.length,
       substrateEfficiency: ratings.reduce((sum, r) => sum + r.substrateEfficiency, 0) / ratings.length,
       broadUtility: ratings.reduce((sum, r) => sum + r.broadUtility, 0) / ratings.length,
       awareness: ratings.reduce((sum, r) => sum + r.awareness, 0) / ratings.length,
       agentFriction: ratings.reduce((sum, r) => sum + r.agentFriction, 0) / ratings.length,
-      humanCoefficient: ratings.reduce((sum, r) => sum + r.humanCoefficient, 0) / ratings.length
+      humanCoefficient: ratings.reduce((sum, r) => sum + r.humanCoefficient, 0) / ratings.length,
+      acesScore: acesRatings.length > 0
+        ? acesRatings.reduce((sum, r) => sum + r.acesScore, 0) / acesRatings.length
+        : null
     };
 
     res.json({
