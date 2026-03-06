@@ -34,7 +34,7 @@ const MODEL_CONFIGS = [
   { id: 'claude-sonnet-4-5-20250929', provider: 'anthropic', label: 'Claude Sonnet' },
   { id: 'gpt-4o', provider: 'openai', label: 'GPT-4o' },
   { id: 'meta-llama/llama-3.3-70b-instruct', provider: 'openrouter', label: 'Llama 3.3 70B' },
-  { id: 'gemini-2.0-flash', provider: 'google', label: 'Gemini 2.0 Flash' },
+  { id: 'gemini-2.5-flash', provider: 'google', label: 'Gemini 2.5 Flash' },
 ];
 
 // Repository contexts — tests whether awareness holds across different project types
@@ -244,19 +244,24 @@ async function probeModel(modelConfig, prompt, repoContext) {
       text = response.content[0].text;
     } else {
       // OpenAI-compatible (openai, openrouter, google)
-      const extra = modelConfig.provider === 'openrouter'
-        ? { headers: { 'HTTP-Referer': 'https://survivalindex.org', 'X-Title': 'SurvivalIndex AAS' } }
-        : {};
-      const response = await client.chat.completions.create({
+      const isGoogle = modelConfig.provider === 'google';
+      const completionParams = {
         model: modelConfig.id,
-        max_tokens: 1024,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: fullPrompt },
-        ],
-        response_format: { type: 'json_object' },
-        ...extra,
-      });
+        messages: isGoogle
+          ? [{ role: 'user', content: SYSTEM_PROMPT + '\n\n' + fullPrompt }]
+          : [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: fullPrompt },
+            ],
+      };
+      if (!isGoogle) {
+        completionParams.max_tokens = 1024;
+        completionParams.response_format = { type: 'json_object' };
+      }
+      if (modelConfig.provider === 'openrouter') {
+        completionParams.headers = { 'HTTP-Referer': 'https://survivalindex.org', 'X-Title': 'SurvivalIndex AAS' };
+      }
+      const response = await client.chat.completions.create(completionParams);
       text = response.choices[0].message.content;
     }
 
