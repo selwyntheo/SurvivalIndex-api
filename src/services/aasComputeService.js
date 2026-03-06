@@ -1,16 +1,40 @@
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import prisma from '../config/database.js';
 import { CATEGORY_MAP, PROMPT_WEIGHTS, classifyHiddenGem } from './aasConstants.js';
 
 dotenv.config();
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// ─── Multi-provider model clients ────────────────────────────────────
 
-// Models to test awareness across
-const MODELS = [
-  'claude-sonnet-4-5-20250929',
-  'claude-haiku-4-5-20251001',
+const providers = {};
+
+if (process.env.ANTHROPIC_API_KEY) {
+  providers.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
+if (process.env.OPENAI_API_KEY) {
+  providers.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
+if (process.env.OPENROUTER_API_KEY) {
+  providers.openrouter = new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1',
+  });
+}
+if (process.env.GOOGLE_AI_API_KEY) {
+  providers.google = new OpenAI({
+    apiKey: process.env.GOOGLE_AI_API_KEY,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  });
+}
+
+// Models to test — 4 models across different providers
+const MODEL_CONFIGS = [
+  { id: 'claude-sonnet-4-5-20250929', provider: 'anthropic', label: 'Claude Sonnet' },
+  { id: 'gpt-4o', provider: 'openai', label: 'GPT-4o' },
+  { id: 'meta-llama/llama-3.3-70b-instruct', provider: 'openrouter', label: 'Llama 3.3 70B' },
+  { id: 'gemini-2.0-flash', provider: 'google', label: 'Gemini 2.0 Flash' },
 ];
 
 // Repository contexts — tests whether awareness holds across different project types
@@ -180,32 +204,60 @@ Respond in JSON format:
 
 IMPORTANT: Only include tools you genuinely know and would recommend. Do not pad the list.`;
 
+// ─── Multi-provider probe ────────────────────────────────────────────
+
 /**
- * Send a single blind prompt to a model and extract tool mentions.
+ * Send a blind prompt to any model via its provider.
  */
-async function probeModel(model, prompt, repoContext) {
+async function probeModel(modelConfig, prompt, repoContext) {
   const fullPrompt = repoContext
     ? `I'm building ${repoContext.description}. ${prompt}`
     : prompt;
 
-  try {
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: fullPrompt }],
-    });
+  const client = providers[modelConfig.provider];
+  if (!client) {
+    console.error(`  ⚠ No client for provider "${modelConfig.provider}" — set the API key`);
+    return null;
+  }
 
-    const text = response.content[0].text;
+  try {
+    let text;
+
+    if (modelConfig.provider === 'anthropic') {
+      const response = await client.messages.create({
+        model: modelConfig.id,
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: fullPrompt }],
+      });
+      text = response.content[0].text;
+    } else {
+      // OpenAI-compatible (openai, openrouter, google)
+      const extra = modelConfig.provider === 'openrouter'
+        ? { headers: { 'HTTP-Referer': 'https://survivalindex.org', 'X-Title': 'SurvivalIndex AAS' } }
+        : {};
+      const response = await client.chat.completions.create({
+        model: modelConfig.id,
+        max_tokens: 1024,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: fullPrompt },
+        ],
+        response_format: { type: 'json_object' },
+        ...extra,
+      });
+      text = response.choices[0].message.content;
+    }
+
     return parseToolResponse(text);
   } catch (err) {
-    console.error(`  Probe failed (${model}): ${err.message}`);
+    console.error(`  Probe failed (${modelConfig.label}): ${err.message}`);
     return null;
   }
 }
 
 /**
- * Parse the JSON response from the model.
+ * Parse the JSON response from any model.
  */
 function parseToolResponse(text) {
   try {
@@ -218,7 +270,6 @@ function parseToolResponse(text) {
       allMentioned: parsed.all_mentioned || [],
     };
   } catch {
-    // Fallback: extract tool names from plain text
     return null;
   }
 }
@@ -246,7 +297,6 @@ function matchTools(extraction, projectsByCategory) {
     const norm = normalizeName(name);
     return allProjects.find(p => {
       const pNorm = normalizeName(p.name);
-      // Exact match or substring match
       return pNorm === norm || norm.includes(pNorm) || pNorm.includes(norm);
     }) || null;
   }
@@ -263,7 +313,13 @@ function matchTools(extraction, projectsByCategory) {
  * This is the main entry point.
  */
 export async function computeRealAAS(options = {}) {
-  const { dryRun = false, categories = null, models = MODELS } = options;
+  const { dryRun = false, categories = null } = options;
+
+  // Determine which models can run (have API keys)
+  const activeModels = MODEL_CONFIGS.filter(m => providers[m.provider]);
+  if (activeModels.length === 0) {
+    throw new Error('No API keys configured. Set at least one of: ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, GOOGLE_AI_API_KEY');
+  }
 
   // Load all projects grouped by AAS category
   const projects = await prisma.project.findMany({
@@ -283,11 +339,16 @@ export async function computeRealAAS(options = {}) {
 
   console.log(`\n=== AAS Computation ===`);
   console.log(`Categories: ${categoriesToProcess.length}`);
-  console.log(`Models: ${models.join(', ')}`);
+  console.log(`Models: ${activeModels.map(m => m.label).join(', ')}`);
   console.log(`Repo contexts: ${REPO_CONTEXTS.length}`);
   console.log(`Dry run: ${dryRun}\n`);
 
-  // Track results per tool: { [toolId]: { needPicks, needTotal, ecoPicks, ecoTotal, considMentions, considTotal, repoTypes, modelResults } }
+  if (activeModels.length < 4) {
+    const missing = MODEL_CONFIGS.filter(m => !providers[m.provider]);
+    console.log(`⚠ Missing keys for: ${missing.map(m => `${m.label} (${m.provider.toUpperCase()}_API_KEY)`).join(', ')}\n`);
+  }
+
+  // Track results per tool
   const toolStats = {};
 
   function ensureTool(toolId) {
@@ -297,7 +358,7 @@ export async function computeRealAAS(options = {}) {
         ecoPicks: 0, ecoTotal: 0,
         considMentions: 0, considTotal: 0,
         repoTypes: new Set(),
-        modelResults: {}, // { [modelId]: { picks, total } }
+        modelResults: {}, // { [modelLabel]: { picks, total } }
       };
     }
     return toolStats[toolId];
@@ -317,39 +378,36 @@ export async function computeRealAAS(options = {}) {
 
     console.log(`\n📂 ${categoryId} (${categoryProjects.length} tools)`);
 
-    for (const model of models) {
-      const modelShort = model.split('-').slice(0, 3).join('-');
-
+    for (const modelConfig of activeModels) {
       // Need-based prompts (with repo context variation)
       for (const prompt of prompts.need_based) {
         for (const repo of REPO_CONTEXTS) {
-          const extraction = await probeModel(model, prompt, repo);
+          const extraction = await probeModel(modelConfig, prompt, repo);
           totalCalls++;
           const matches = matchTools(extraction, projectsByCategory);
 
-          // Mark all category tools for this prompt
           for (const p of categoryProjects) {
             const stats = ensureTool(p.id);
             stats.needTotal++;
-            if (!stats.modelResults[model]) stats.modelResults[model] = { picks: 0, total: 0 };
-            stats.modelResults[model].total++;
+            if (!stats.modelResults[modelConfig.label]) stats.modelResults[modelConfig.label] = { picks: 0, total: 0 };
+            stats.modelResults[modelConfig.label].total++;
 
             if (matches.primaryMatch?.id === p.id) {
               stats.needPicks++;
               stats.repoTypes.add(repo.id);
-              stats.modelResults[model].picks++;
+              stats.modelResults[modelConfig.label].picks++;
             }
           }
 
           if (matches.primaryMatch) {
-            console.log(`  ${modelShort} | need | ${repo.id.padEnd(12)} → ${matches.primaryMatch.name}`);
+            console.log(`  ${modelConfig.label.padEnd(18)} | need | ${repo.id.padEnd(12)} → ${matches.primaryMatch.name}`);
           }
         }
       }
 
       // Ecosystem-adjacent prompts
       for (const prompt of (prompts.ecosystem_adjacent || [])) {
-        const extraction = await probeModel(model, prompt, null);
+        const extraction = await probeModel(modelConfig, prompt, null);
         totalCalls++;
         const matches = matchTools(extraction, projectsByCategory);
 
@@ -364,7 +422,7 @@ export async function computeRealAAS(options = {}) {
 
       // Consideration prompts
       for (const prompt of (prompts.consideration || [])) {
-        const extraction = await probeModel(model, prompt, null);
+        const extraction = await probeModel(modelConfig, prompt, null);
         totalCalls++;
         const matches = matchTools(extraction, projectsByCategory);
 
@@ -412,8 +470,8 @@ export async function computeRealAAS(options = {}) {
     const totalDataPoints = stats.needTotal + stats.ecoTotal + stats.considTotal;
     const confidence = totalDataPoints >= 50 ? 0.8 : totalDataPoints >= 20 ? 0.5 : 0.3;
 
-    const modelScores = modelEntries.map(([modelId, r]) => ({
-      modelId,
+    const modelScores = modelEntries.map(([modelLabel, r]) => ({
+      modelId: modelLabel,
       pickRate: r.total > 0 ? r.picks / r.total : 0,
       knowsTool: r.total > 0 && (r.picks / r.total) >= 0.3,
     }));
@@ -475,6 +533,19 @@ export async function computeRealAAS(options = {}) {
       `${Math.round(r.crossModelConsistency * 100)}%`.padEnd(9) +
       r.dataPoints
     );
+  }
+
+  // Print per-model breakdown
+  console.log('\n--- Per-model primary pick rates ---');
+  const modelLabels = activeModels.map(m => m.label);
+  console.log('TOOL'.padEnd(22) + modelLabels.map(l => l.padEnd(18)).join(''));
+  console.log('-'.repeat(22 + modelLabels.length * 18));
+  for (const r of results) {
+    const cols = modelLabels.map(label => {
+      const ms = r.modelScores.find(s => s.modelId === label);
+      return ms ? `${Math.round(ms.pickRate * 100)}%` : '--';
+    });
+    console.log(r.toolName.padEnd(22) + cols.map(c => c.padEnd(18)).join(''));
   }
 
   return results;
