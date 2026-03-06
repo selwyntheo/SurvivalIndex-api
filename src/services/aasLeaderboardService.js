@@ -82,6 +82,7 @@ export async function buildToolLeaderboard(categoryId) {
       hiddenGemClass: s.hiddenGemClass,
       confidence: s.confidence,
       dataPoints: s.dataPoints,
+      modelScores: s.modelScores || [],
     }));
 
   return tools;
