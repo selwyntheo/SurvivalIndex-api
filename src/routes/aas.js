@@ -139,8 +139,8 @@ router.post('/compute', requireAdmin, async (req, res) => {
   }
 });
 
-// POST /api/aas/executions — Record agent execution + extraction
-router.post('/executions', async (req, res) => {
+// POST /api/aas/executions — Record agent execution + extraction (admin only)
+router.post('/executions', requireAdmin, async (req, res) => {
   try {
     const {
       agentName, modelName, repositoryType, categoryId, promptType,
@@ -182,8 +182,8 @@ router.post('/executions', async (req, res) => {
   }
 });
 
-// POST /api/aas/expert-evaluations — Submit expert evaluation
-router.post('/expert-evaluations', async (req, res) => {
+// POST /api/aas/expert-evaluations — Submit expert evaluation (admin only)
+router.post('/expert-evaluations', requireAdmin, async (req, res) => {
   try {
     const {
       toolId, categoryId, evaluatorId,

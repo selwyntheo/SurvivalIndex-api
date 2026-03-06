@@ -36,6 +36,20 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Input validation
+    if (name.length > 200 || category.length > 100 || description.length > 2000) {
+      return res.status(400).json({ error: 'Field length exceeds limit (name: 200, category: 100, description: 2000)' });
+    }
+    if (!['open-source', 'saas', 'hybrid'].includes(type)) {
+      return res.status(400).json({ error: 'type must be: open-source, saas, or hybrid' });
+    }
+    if (url && url.length > 500) {
+      return res.status(400).json({ error: 'URL too long (max 500)' });
+    }
+    if (submitterEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(submitterEmail)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
     // Check if project with same name already exists
     const existingProject = await prisma.project.findUnique({
       where: { name }
@@ -104,16 +118,18 @@ router.post('/', async (req, res) => {
  */
 router.get('/', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
-    
+    const { status } = req.query;
+    const pageNum = Math.max(parseInt(req.query.page) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
+
     const where = status ? { status } : {};
-    
+
     const [submissions, total] = await Promise.all([
       prisma.projectSubmission.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: parseInt(limit)
+        skip: (pageNum - 1) * limitNum,
+        take: limitNum
       }),
       prisma.projectSubmission.count({ where })
     ]);
@@ -121,10 +137,10 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     res.json({
       data: submissions,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {

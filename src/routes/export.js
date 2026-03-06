@@ -1,6 +1,6 @@
 import express from 'express';
 import exportService from '../services/exportService.js';
-import { requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -8,7 +8,7 @@ const router = express.Router();
  * GET /api/export/projects
  * Get all projects as JSONL
  */
-router.get('/projects', async (req, res, next) => {
+router.get('/projects', requireAuth, async (req, res, next) => {
   try {
     const result = await exportService.exportProjects();
     res.json({
@@ -24,7 +24,7 @@ router.get('/projects', async (req, res, next) => {
  * GET /api/export/ai-ratings
  * Get all AI ratings as JSONL
  */
-router.get('/ai-ratings', async (req, res, next) => {
+router.get('/ai-ratings', requireAuth, async (req, res, next) => {
   try {
     const result = await exportService.exportAIRatings();
     res.json({
@@ -40,7 +40,7 @@ router.get('/ai-ratings', async (req, res, next) => {
  * GET /api/export/community-ratings
  * Get all community ratings as JSONL
  */
-router.get('/community-ratings', async (req, res, next) => {
+router.get('/community-ratings', requireAdmin, async (req, res, next) => {
   try {
     const result = await exportService.exportCommunityRatings();
     res.json({
@@ -56,7 +56,7 @@ router.get('/community-ratings', async (req, res, next) => {
  * GET /api/export/submissions
  * Get pending submissions as JSONL
  */
-router.get('/submissions', async (req, res, next) => {
+router.get('/submissions', requireAdmin, async (req, res, next) => {
   try {
     const result = await exportService.exportSubmissions();
     res.json({
@@ -85,7 +85,7 @@ router.post('/generate', requireAdmin, async (req, res, next) => {
  * GET /api/export/stats
  * Get export statistics
  */
-router.get('/stats', async (req, res, next) => {
+router.get('/stats', requireAuth, async (req, res, next) => {
   try {
     const stats = await exportService.getStats();
     res.json({

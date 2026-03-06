@@ -23,9 +23,9 @@ class ProjectService {
       };
     }
 
-    // Calculate pagination
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
+    // Calculate pagination with bounds
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
     const skip = (pageNum - 1) * limitNum;
 
     // Get total count for pagination metadata
@@ -73,11 +73,23 @@ class ProjectService {
   }
 
   /**
+   * Whitelist allowed project fields
+   */
+  _pickProjectFields(data) {
+    const allowed = ['name', 'type', 'category', 'description', 'url', 'githubUrl', 'logo', 'tags', 'yearCreated', 'selfHostable', 'license', 'techStack', 'alternativeTo'];
+    const result = {};
+    for (const key of allowed) {
+      if (data[key] !== undefined) result[key] = data[key];
+    }
+    return result;
+  }
+
+  /**
    * Create new project
    */
   async createProject(projectData) {
     return await prisma.project.create({
-      data: projectData,
+      data: this._pickProjectFields(projectData),
       include: {
         aiRating: true
       }
@@ -90,7 +102,7 @@ class ProjectService {
   async updateProject(id, projectData) {
     return await prisma.project.update({
       where: { id: parseInt(id) },
-      data: projectData,
+      data: this._pickProjectFields(projectData),
       include: {
         aiRating: true,
         userRatings: true

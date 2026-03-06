@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import projectRoutes from './routes/projects.js';
 import ratingRoutes from './routes/ratings.js';
@@ -10,18 +12,46 @@ import exportRoutes from './routes/export.js';
 import acesRoutes from './routes/aces.js';
 import sfiRoutes from './routes/sfi.js';
 import aasRoutes from './routes/aas.js';
+import authService from './services/authService.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const isProd = process.env.NODE_ENV === 'production';
 
-// Middleware
+if (isProd && !process.env.FRONTEND_URL) {
+  console.error('FATAL: FRONTEND_URL must be set in production');
+  process.exit(1);
+}
+
+// Security headers
+app.use(helmet());
+
+// CORS
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json());
+
+// Body size limit
+app.use(express.json({ limit: '100kb' }));
+
+// Rate limiting
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+const aiJudgeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+const writeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
+
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/ai-judge', aiJudgeLimiter);
+app.use('/api/submissions', writeLimiter);
+app.use('/api/ratings', writeLimiter);
+app.use('/api/aces/observations', writeLimiter);
+app.use('/api/aas/executions', writeLimiter);
+app.use('/api/aas/expert-evaluations', writeLimiter);
+app.use('/api', generalLimiter);
 
 // Request logging
 app.use((req, res, next) => {
@@ -29,94 +59,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Root endpoint - API documentation
+// Root endpoint
 app.get('/', (req, res) => {
   res.json({
     name: 'SurvivalIndex API',
     version: '1.0.0',
-    description: 'AI-powered software survival rating platform',
-    mode: process.env.ANTHROPIC_API_KEY === 'demo_mode' ? 'DEMO MODE' : 'PRODUCTION',
-    endpoints: {
-      health: 'GET /api/health',
-      auth: {
-        login: 'POST /api/auth/login (body: {email, password})',
-        logout: 'POST /api/auth/logout',
-        me: 'GET /api/auth/me',
-        register: 'POST /api/auth/register (body: {email, password, role?, name?})'
-      },
-      projects: {
-        list: 'GET /api/projects',
-        getById: 'GET /api/projects/:id',
-        leaderboard: 'GET /api/projects/leaderboard',
-        create: 'POST /api/projects',
-        update: 'PUT /api/projects/:id',
-        delete: 'DELETE /api/projects/:id'
-      },
-      aiJudge: {
-        evaluate: 'POST /api/ai-judge/evaluate/:projectId [ADMIN ONLY]',
-        batchEvaluate: 'POST /api/ai-judge/batch-evaluate (body: {projectIds: [1,2,3]}) [ADMIN ONLY]',
-        reevaluateStale: 'POST /api/ai-judge/reevaluate-stale?daysOld=30 [ADMIN ONLY]'
-      },
-      ratings: {
-        submit: 'POST /api/ratings',
-        getByProject: 'GET /api/ratings/:projectId',
-        getAverage: 'GET /api/ratings/:projectId/average'
-      },
-      submissions: {
-        submit: 'POST /api/submissions (body: project details)',
-        list: 'GET /api/submissions [ADMIN ONLY]',
-        get: 'GET /api/submissions/:id [ADMIN ONLY]',
-        pendingCount: 'GET /api/submissions/pending/count [ADMIN ONLY]',
-        approve: 'POST /api/submissions/:id/approve [ADMIN ONLY]',
-        reject: 'POST /api/submissions/:id/reject (body: {rejectionReason}) [ADMIN ONLY]',
-        delete: 'DELETE /api/submissions/:id [ADMIN ONLY]'
-      },
-      export: {
-        projects: 'GET /api/export/projects - Export all projects as JSONL',
-        aiRatings: 'GET /api/export/ai-ratings - Export AI ratings as JSONL',
-        communityRatings: 'GET /api/export/community-ratings - Export community ratings as JSONL',
-        submissions: 'GET /api/export/submissions - Export pending submissions as JSONL',
-        generate: 'POST /api/export/generate - Generate all exports [ADMIN ONLY]',
-        stats: 'GET /api/export/stats - Get export statistics'
-      },
-      aces: {
-        submitObservation: 'POST /api/aces/observations (body: {projectId, agentName, promptCategory, wasChosen, ...})',
-        getMetrics: 'GET /api/aces/metrics/:projectId',
-        getAllMetrics: 'GET /api/aces/metrics',
-        expertReview: 'POST /api/aces/observations/:id/review [ADMIN ONLY]',
-        aggregateProject: 'POST /api/aces/aggregate/:projectId [ADMIN ONLY]',
-        aggregateAll: 'POST /api/aces/aggregate [ADMIN ONLY]'
-      },
-      sfi: {
-        toolLeaderboard: 'GET /api/sfi/leaderboard/tools?category=databases',
-        categoryLeaderboard: 'GET /api/sfi/leaderboard/categories',
-        agentLeaderboard: 'GET /api/sfi/leaderboard/agents',
-        toolDetail: 'GET /api/sfi/tool/:toolName?category=databases',
-        tiers: 'GET /api/sfi/tiers',
-        categories: 'GET /api/sfi/categories',
-        version: 'GET /api/sfi/version',
-        compute: 'POST /api/sfi/compute [ADMIN ONLY]'
-      },
-      aas: {
-        leaderboard: 'GET /api/aas/leaderboard',
-        categoryLeaderboard: 'GET /api/aas/leaderboard/:category',
-        toolDetail: 'GET /api/aas/tool/:toolName?category=databases',
-        toolModels: 'GET /api/aas/tool/:toolName/models',
-        hiddenGems: 'GET /api/aas/hidden-gems',
-        categoryHiddenGems: 'GET /api/aas/hidden-gems/:category',
-        categories: 'GET /api/aas/categories',
-        version: 'GET /api/aas/version',
-        compute: 'POST /api/aas/compute [ADMIN ONLY]',
-        recordExecution: 'POST /api/aas/executions',
-        submitExpertEval: 'POST /api/aas/expert-evaluations'
-      }
-    },
-    examples: {
-      evaluateProject: 'curl -X POST http://localhost:3001/api/ai-judge/evaluate/1',
-      getLeaderboard: 'curl http://localhost:3001/api/projects/leaderboard',
-      listProjects: 'curl http://localhost:3001/api/projects'
-    },
-    docs: 'See README.md and SETUP_GUIDE.md for full documentation'
+    health: 'GET /api/health',
   });
 });
 
@@ -136,7 +84,6 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
   });
 });
 
@@ -151,7 +98,12 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 SurvivalIndex API server running on http://localhost:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Frontend: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`SurvivalIndex API running on port ${PORT}`);
+
+  // Cleanup expired sessions hourly
+  setInterval(() => {
+    authService.cleanupExpiredSessions().catch(err =>
+      console.error('Session cleanup error:', err)
+    );
+  }, 60 * 60 * 1000);
 });

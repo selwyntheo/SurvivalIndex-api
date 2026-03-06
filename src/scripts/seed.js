@@ -53,30 +53,21 @@ async function main() {
     console.log('✅ Existing data cleared\n');
 
     // Create default admin user
-    console.log('👤 Creating default admin user...');
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@survivalindex.org';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    console.log('Creating admin user...');
+    if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required. Refusing to seed with default credentials.');
+    }
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
     const adminName = process.env.ADMIN_NAME || 'Admin User';
-    
+
     const adminUser = await authService.createUser({
       email: adminEmail,
       password: adminPassword,
       role: 'admin',
       name: adminName
     });
-    console.log(`✅ Admin user created: ${adminUser.email}`);
-    console.log('   📝 Login credentials:');
-    console.log(`      Email: ${adminEmail}`);
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`      Password: ${adminPassword}`);
-    } else {
-      console.log('      Password: [hidden in production]');
-    }
-    if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
-      console.log('   ⚠️  WARNING: Using default credentials! Set ADMIN_EMAIL and ADMIN_PASSWORD in production!\n');
-    } else {
-      console.log('   ✅ Using custom admin credentials from environment variables\n');
-    }
+    console.log(`Admin user created: ${adminUser.email}\n`);
 
     // Seed projects
     console.log('📦 Seeding projects...');
@@ -108,11 +99,10 @@ async function main() {
     console.log(`   - Open Source: ${sampleProjects.filter(p => p.type === 'open-source').length}`);
     console.log(`   - SaaS: ${sampleProjects.filter(p => p.type === 'saas').length}`);
     console.log('\n✨ Database seeding complete!');
-    console.log('\n💡 Next steps:');
-    console.log('   1. Start the backend: npm run dev:backend');
+    console.log('\nNext steps:');
+    console.log('   1. Start the backend: npm run dev');
     console.log('   2. Login as admin: POST /api/auth/login');
-    console.log('      Body: {"email": "admin@SurvivalIndex.org", "password": "admin123"}');
-    console.log('   3. Trigger AI evaluations: POST /api/ai-judge/evaluate/:projectId (Admin only)');
+    console.log('   3. Trigger AI evaluations: POST /api/ai-judge/evaluate/:projectId');
     console.log('   4. View projects: GET /api/projects\n');
 
   } catch (error) {

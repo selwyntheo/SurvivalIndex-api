@@ -6,9 +6,9 @@ const router = express.Router();
 
 /**
  * POST /api/aces/observations
- * Submit an agent choice observation (public)
+ * Submit an agent choice observation (requires API key)
  */
-router.post('/observations', async (req, res, next) => {
+router.post('/observations', requireAdmin, async (req, res, next) => {
   try {
     const { projectId, agentName, promptCategory, promptText, wasChosen, alternativeChosen, wasCustomDIY, sessionId, source } = req.body;
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import authService from '../services/authService.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -73,11 +74,10 @@ router.get('/me', async (req, res, next) => {
 
 /**
  * POST /api/auth/register (Admin only - for creating new users)
- * Note: This should be protected in production
  */
-router.post('/register', async (req, res, next) => {
+router.post('/register', requireAdmin, async (req, res, next) => {
   try {
-    const { email, password, role, name } = req.body;
+    const { email, password, name } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -86,7 +86,7 @@ router.post('/register', async (req, res, next) => {
     const user = await authService.createUser({
       email,
       password,
-      role: role || 'user',
+      role: 'user',
       name
     });
 

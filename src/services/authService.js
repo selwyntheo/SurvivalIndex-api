@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { createHash } from 'crypto';
 import prisma from '../config/database.js';
 
 /**
@@ -26,6 +27,13 @@ class AuthService {
    */
   generateToken() {
     return crypto.randomBytes(32).toString('hex');
+  }
+
+  /**
+   * Hash a token with SHA-256 for storage
+   */
+  hashToken(token) {
+    return createHash('sha256').update(token).digest('hex');
   }
 
   /**
@@ -72,14 +80,15 @@ class AuthService {
 
     // Generate session token
     const token = this.generateToken();
+    const tokenHash = this.hashToken(token);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
 
-    // Create session
+    // Create session (store hash, not plain token)
     const session = await prisma.session.create({
       data: {
         userId: user.id,
-        token,
+        token: tokenHash,
         expiresAt
       }
     });
@@ -91,7 +100,7 @@ class AuthService {
         role: user.role,
         name: user.name
       },
-      token: session.token,
+      token,  // return plain token to client
       expiresAt: session.expiresAt
     };
   }
@@ -104,8 +113,9 @@ class AuthService {
       return null;
     }
 
+    const tokenHash = this.hashToken(token);
     const session = await prisma.session.findUnique({
-      where: { token },
+      where: { token: tokenHash },
       include: {
         user: {
           select: {
@@ -142,8 +152,9 @@ class AuthService {
       return;
     }
 
+    const tokenHash = this.hashToken(token);
     await prisma.session.deleteMany({
-      where: { token }
+      where: { token: tokenHash }
     });
   }
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import prisma from '../config/database.js';
+import { optionalAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -7,7 +8,7 @@ const router = express.Router();
  * POST /api/ratings
  * Submit a user rating for a project
  */
-router.post('/', async (req, res, next) => {
+router.post('/', optionalAuth, async (req, res, next) => {
   try {
     const {
       projectId,
@@ -18,7 +19,6 @@ router.post('/', async (req, res, next) => {
       agentFriction,
       humanCoefficient,
       acesScore,
-      userId
     } = req.body;
 
     // Validate scores
@@ -60,8 +60,8 @@ router.post('/', async (req, res, next) => {
         agentFriction,
         humanCoefficient,
         acesScore: acesScore !== undefined ? acesScore : null,
-        userId,
-        ipAddress: req.ip
+        userId: req.user?.id?.toString() || null,
+        ipAddress: null
       }
     });
 

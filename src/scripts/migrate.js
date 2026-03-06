@@ -8,7 +8,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 try {
-  await prisma.$executeRawUnsafe('DROP TABLE IF EXISTS _prisma_migrations');
+  await prisma.$executeRaw`DROP TABLE IF EXISTS _prisma_migrations`;
   console.log('Cleared old migration history');
 } catch (e) {
   console.log('No existing migration history to clear (fresh database)');
