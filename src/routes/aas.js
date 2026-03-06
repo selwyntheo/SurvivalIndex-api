@@ -2,6 +2,7 @@ import { Router } from 'express';
 import prisma from '../config/database.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { computeAllAAS } from '../services/aasService.js';
+import { computeRealAAS } from '../services/aasComputeService.js';
 import {
   buildCategoryLeaderboard,
   buildToolLeaderboard,
@@ -125,7 +126,7 @@ router.get('/version', (req, res) => {
   });
 });
 
-// POST /api/aas/compute — Trigger recomputation (admin only)
+// POST /api/aas/compute — Trigger bootstrap recomputation (admin only)
 router.post('/compute', requireAdmin, async (req, res) => {
   try {
     const results = await computeAllAAS();
@@ -136,6 +137,33 @@ router.post('/compute', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('AAS computation error:', err);
     res.status(500).json({ error: 'Failed to compute AAS scores' });
+  }
+});
+
+// POST /api/aas/compute-real — Trigger real multi-model AAS computation (admin only)
+// This runs in the background since it makes hundreds of API calls (~5-15 min)
+router.post('/compute-real', requireAdmin, async (req, res) => {
+  const { categories, dryRun } = req.body || {};
+
+  // Clear old scores first (unless dry run)
+  if (!dryRun) {
+    const deleted = await prisma.aasScore.deleteMany({});
+    console.log(`Cleared ${deleted.count} old AAS scores.`);
+  }
+
+  // Respond immediately — computation runs in background
+  res.json({
+    message: 'Real AAS computation started in background',
+    dryRun: !!dryRun,
+    categories: categories || 'all',
+  });
+
+  // Run computation asynchronously
+  try {
+    const results = await computeRealAAS({ dryRun: !!dryRun, categories: categories || null });
+    console.log(`Real AAS computation complete: ${results.length} tools scored.`);
+  } catch (err) {
+    console.error('Real AAS computation failed:', err);
   }
 });
 
