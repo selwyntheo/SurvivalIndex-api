@@ -364,23 +364,8 @@ export async function computeRealAAS(options = {}) {
     console.log(`⚠ Missing keys for: ${missing.map(m => `${m.label} (${m.provider.toUpperCase()}_API_KEY)`).join(', ')}\n`);
   }
 
-  // Track results per tool
-  const toolStats = {};
-
-  function ensureTool(toolId) {
-    if (!toolStats[toolId]) {
-      toolStats[toolId] = {
-        needPicks: 0, needTotal: 0,
-        ecoPicks: 0, ecoTotal: 0,
-        considMentions: 0, considTotal: 0,
-        repoTypes: new Set(),
-        modelResults: {}, // { [modelLabel]: { picks, total } }
-      };
-    }
-    return toolStats[toolId];
-  }
-
   let totalCalls = 0;
+  const allResults = [];
 
   for (const categoryId of categoriesToProcess) {
     const prompts = CATEGORY_PROMPTS[categoryId];
@@ -394,6 +379,21 @@ export async function computeRealAAS(options = {}) {
 
     console.log(`\n📂 ${categoryId} (${categoryProjects.length} tools)`);
 
+    // Reset per-category stats
+    const catStats = {};
+    function ensureCatTool(id) {
+      if (!catStats[id]) {
+        catStats[id] = {
+          needPicks: 0, needTotal: 0,
+          ecoPicks: 0, ecoTotal: 0,
+          considMentions: 0, considTotal: 0,
+          repoTypes: new Set(),
+          modelResults: {},
+        };
+      }
+      return catStats[id];
+    }
+
     for (const modelConfig of activeModels) {
       // Need-based prompts (with repo context variation)
       for (const prompt of prompts.need_based) {
@@ -403,7 +403,7 @@ export async function computeRealAAS(options = {}) {
           const matches = matchTools(extraction, projectsByCategory);
 
           for (const p of categoryProjects) {
-            const stats = ensureTool(p.id);
+            const stats = ensureCatTool(p.id);
             stats.needTotal++;
             if (!stats.modelResults[modelConfig.label]) stats.modelResults[modelConfig.label] = { picks: 0, total: 0 };
             stats.modelResults[modelConfig.label].total++;
@@ -428,7 +428,7 @@ export async function computeRealAAS(options = {}) {
         const matches = matchTools(extraction, projectsByCategory);
 
         for (const p of categoryProjects) {
-          const stats = ensureTool(p.id);
+          const stats = ensureCatTool(p.id);
           stats.ecoTotal++;
           if (matches.primaryMatch?.id === p.id || matches.consideredMatches.some(m => m.id === p.id)) {
             stats.ecoPicks++;
@@ -443,7 +443,7 @@ export async function computeRealAAS(options = {}) {
         const matches = matchTools(extraction, projectsByCategory);
 
         for (const p of categoryProjects) {
-          const stats = ensureTool(p.id);
+          const stats = ensureCatTool(p.id);
           stats.considTotal++;
           if (matches.allMatches.some(m => m.id === p.id)) {
             stats.considMentions++;
@@ -451,93 +451,75 @@ export async function computeRealAAS(options = {}) {
         }
       }
     }
+
+    // ─── Save scores for this category immediately ───
+    let savedCount = 0;
+    for (const [toolIdStr, stats] of Object.entries(catStats)) {
+      const toolId = parseInt(toolIdStr);
+      const project = projects.find(p => p.id === toolId);
+      if (!project) continue;
+
+      const needRate = stats.needTotal > 0 ? stats.needPicks / stats.needTotal : 0;
+      const ecoRate = stats.ecoTotal > 0 ? stats.ecoPicks / stats.ecoTotal : 0;
+      const considRate = stats.considTotal > 0 ? stats.considMentions / stats.considTotal : 0;
+
+      const composite =
+        needRate * PROMPT_WEIGHTS.need_based +
+        ecoRate * PROMPT_WEIGHTS.ecosystem_adjacent +
+        considRate * PROMPT_WEIGHTS.consideration;
+
+      const aas = Math.round(composite * 100);
+      const contextBreadth = stats.repoTypes.size;
+
+      const modelEntries = Object.entries(stats.modelResults);
+      const knowingModels = modelEntries.filter(([, r]) => r.total > 0 && (r.picks / r.total) >= 0.3).length;
+      const crossModelConsistency = modelEntries.length > 0 ? knowingModels / modelEntries.length : 0;
+
+      const totalDataPoints = stats.needTotal + stats.ecoTotal + stats.considTotal;
+      const confidence = totalDataPoints >= 50 ? 0.8 : totalDataPoints >= 20 ? 0.5 : 0.3;
+
+      const modelScores = modelEntries.map(([modelLabel, r]) => ({
+        modelId: modelLabel,
+        pickRate: r.total > 0 ? r.picks / r.total : 0,
+        knowsTool: r.total > 0 && (r.picks / r.total) >= 0.3,
+      }));
+
+      const result = {
+        toolId, toolName: project.name, categoryId, aas,
+        unpromptedPickRate: needRate, ecosystemPickRate: ecoRate,
+        considerationRate: considRate, contextBreadth,
+        crossModelConsistency, modelScores,
+        dataPoints: totalDataPoints, confidence,
+      };
+      allResults.push(result);
+
+      if (!dryRun) {
+        await prisma.aasScore.create({
+          data: {
+            toolId, categoryId, aas,
+            unpromptedPickRate: needRate, ecosystemPickRate: ecoRate,
+            considerationRate: considRate, contextBreadth,
+            crossModelConsistency,
+            expertPreference: null, hiddenGemGap: null, hiddenGemClass: null,
+            modelScores, dataPoints: totalDataPoints, confidence,
+          },
+        });
+        savedCount++;
+      }
+    }
+
+    console.log(`  ✅ ${categoryId}: ${savedCount} tools saved to DB`);
   }
 
   console.log(`\n📊 Total API calls: ${totalCalls}`);
 
-  // Calculate AAS for each tool and store
-  const results = [];
-
-  for (const [toolIdStr, stats] of Object.entries(toolStats)) {
-    const toolId = parseInt(toolIdStr);
-    const project = projects.find(p => p.id === toolId);
-    if (!project) continue;
-
-    const categoryId = CATEGORY_MAP[project.category] || project.category?.toLowerCase().replace(/\s+/g, '-');
-
-    const needRate = stats.needTotal > 0 ? stats.needPicks / stats.needTotal : 0;
-    const ecoRate = stats.ecoTotal > 0 ? stats.ecoPicks / stats.ecoTotal : 0;
-    const considRate = stats.considTotal > 0 ? stats.considMentions / stats.considTotal : 0;
-
-    // Weighted composite
-    const composite =
-      needRate * PROMPT_WEIGHTS.need_based +
-      ecoRate * PROMPT_WEIGHTS.ecosystem_adjacent +
-      considRate * PROMPT_WEIGHTS.consideration;
-
-    const aas = Math.round(composite * 100);
-    const contextBreadth = stats.repoTypes.size; // 0-4
-
-    // Cross-model consistency
-    const modelEntries = Object.entries(stats.modelResults);
-    const knowingModels = modelEntries.filter(([, r]) => r.total > 0 && (r.picks / r.total) >= 0.3).length;
-    const crossModelConsistency = modelEntries.length > 0 ? knowingModels / modelEntries.length : 0;
-
-    const totalDataPoints = stats.needTotal + stats.ecoTotal + stats.considTotal;
-    const confidence = totalDataPoints >= 50 ? 0.8 : totalDataPoints >= 20 ? 0.5 : 0.3;
-
-    const modelScores = modelEntries.map(([modelLabel, r]) => ({
-      modelId: modelLabel,
-      pickRate: r.total > 0 ? r.picks / r.total : 0,
-      knowsTool: r.total > 0 && (r.picks / r.total) >= 0.3,
-    }));
-
-    const result = {
-      toolId,
-      toolName: project.name,
-      categoryId,
-      aas,
-      unpromptedPickRate: needRate,
-      ecosystemPickRate: ecoRate,
-      considerationRate: considRate,
-      contextBreadth,
-      crossModelConsistency,
-      modelScores,
-      dataPoints: totalDataPoints,
-      confidence,
-    };
-
-    results.push(result);
-
-    if (!dryRun) {
-      await prisma.aasScore.create({
-        data: {
-          toolId,
-          categoryId,
-          aas,
-          unpromptedPickRate: needRate,
-          ecosystemPickRate: ecoRate,
-          considerationRate: considRate,
-          contextBreadth,
-          crossModelConsistency,
-          expertPreference: null,
-          hiddenGemGap: null,
-          hiddenGemClass: null,
-          modelScores,
-          dataPoints: totalDataPoints,
-          confidence,
-        },
-      });
-    }
-  }
-
   // Print summary
-  results.sort((a, b) => b.aas - a.aas);
+  allResults.sort((a, b) => b.aas - a.aas);
 
   console.log('\n' + 'TOOL'.padEnd(22) + 'CATEGORY'.padEnd(18) + 'AAS'.padEnd(6) + 'PICK%'.padEnd(8) + 'ECO%'.padEnd(8) + 'CONSID%'.padEnd(9) + 'BREADTH'.padEnd(9) + 'MODELS'.padEnd(9) + 'PTS');
   console.log('-'.repeat(100));
 
-  for (const r of results) {
+  for (const r of allResults) {
     console.log(
       r.toolName.padEnd(22) +
       r.categoryId.padEnd(18) +
@@ -556,7 +538,7 @@ export async function computeRealAAS(options = {}) {
   const modelLabels = activeModels.map(m => m.label);
   console.log('TOOL'.padEnd(22) + modelLabels.map(l => l.padEnd(18)).join(''));
   console.log('-'.repeat(22 + modelLabels.length * 18));
-  for (const r of results) {
+  for (const r of allResults) {
     const cols = modelLabels.map(label => {
       const ms = r.modelScores.find(s => s.modelId === label);
       return ms ? `${Math.round(ms.pickRate * 100)}%` : '--';
@@ -564,5 +546,5 @@ export async function computeRealAAS(options = {}) {
     console.log(r.toolName.padEnd(22) + cols.map(c => c.padEnd(18)).join(''));
   }
 
-  return results;
+  return allResults;
 }
