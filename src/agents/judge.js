@@ -400,8 +400,21 @@ Respond ONLY with valid JSON in this exact format:
       const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) ||
                        responseText.match(/```\n([\s\S]*?)\n```/);
 
-      const jsonString = jsonMatch ? jsonMatch[1] : responseText;
-      const parsed = JSON.parse(jsonString.trim());
+      let jsonString = jsonMatch ? jsonMatch[1] : responseText;
+
+      // Try parsing as-is first, then attempt repair if it fails
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonString.trim());
+      } catch (firstErr) {
+        // Common Claude issue: extra closing brace before "suggestions"
+        // e.g. ..."overall": "text" }, "suggestions": ... (two closes instead of one)
+        const repaired = jsonString.replace(
+          /("overall"\s*:\s*"(?:[^"\\]|\\.)*")\s*\}\s*\}\s*,\s*("suggestions")/,
+          '$1\n  },\n  $2'
+        );
+        parsed = JSON.parse(repaired.trim());
+      }
 
       // Validate structure
       if (!parsed.scores || !parsed.confidence || !parsed.reasoning) {
