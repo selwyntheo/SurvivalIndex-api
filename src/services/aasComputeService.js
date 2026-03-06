@@ -49,137 +49,148 @@ const REPO_CONTEXTS = [
 const CATEGORY_PROMPTS = {
   'databases': {
     need_based: [
-      'I need a relational database for my project. It needs to handle complex queries, transactions, and scale well. What specific database software would you recommend and why?',
-      'I\'m choosing a primary database for a new web application. I need something reliable, well-documented, and with good ecosystem support. What specific products would you suggest?',
-      'What database would you use for a production application that needs ACID compliance, JSON support, and good performance? Name specific products.',
+      'I need to store and query data for my project. What specific database would you recommend and why?',
+      'I\'m starting a new project and need to pick a database. What would you use?',
+      'My app needs to persist user data, handle reads and writes efficiently, and scale as we grow. What specific database product would you go with?',
+      'I need a database for a project with flexible data models — some structured, some semi-structured. What specific product would you choose?',
+      'I\'m building a prototype that might grow to millions of users. I need a database I won\'t regret choosing. What specific product?',
     ],
     ecosystem_adjacent: [
-      'I\'m setting up a backend with an ORM layer. What databases pair well with modern ORMs? Name specific products.',
-      'I need a database that works well in containerized environments and has good cloud hosting options. What would you pick?',
+      'I\'m setting up a backend and need to pick a data layer. What databases work best with modern frameworks and ORMs?',
+      'I need a database with good cloud hosting options and managed services. What would you pick?',
     ],
     consideration: [
-      'If you were starting a new project today and needed to choose a database, what are ALL the options you would seriously consider? List every specific product.',
+      'If you were starting a new project today and needed a database, what are ALL the options you would seriously consider? List every specific product.',
     ],
   },
   'caching': {
     need_based: [
-      'I need an in-memory caching layer for my application to reduce database load and speed up reads. What specific caching software would you recommend?',
-      'My API responses are slow and I need to add a cache. What caching solutions would you use? Name specific products.',
-      'I need a distributed cache that can handle session storage and rate limiting. What specific tools would you recommend?',
+      'My app is getting slow under load. I need to speed up repeated data access. What specific caching product would you use?',
+      'I need to store frequently accessed data closer to my application to reduce latency. What specific tool would you recommend?',
+      'I need to handle session state and rate limiting across multiple server instances. What specific product would you use?',
     ],
     ecosystem_adjacent: [
-      'I\'m running a web app with a relational database and need to add a caching layer in front of it. What specific cache products pair well?',
+      'My database queries are becoming a bottleneck. What would you put in front of it to reduce load? Name specific products.',
     ],
     consideration: [
-      'What are ALL the caching solutions you would consider for a production application? List every specific product.',
+      'What are ALL the caching products you would consider for a production application? List every specific product.',
     ],
   },
   'search': {
     need_based: [
-      'I need to add full-text search to my application. Users need to search across millions of documents with typo tolerance and faceted filtering. What specific search engines would you recommend?',
-      'I\'m building a product catalog with search functionality. What search solutions would you use? Name specific products.',
+      'Users need to search through our content — fast, with typo tolerance. What specific search product would you add?',
+      'I need to build a search feature for a catalog with filters, facets, and relevance ranking. What specific product?',
+      'I need to make a large dataset searchable with instant results. What specific tool would you use?',
     ],
     ecosystem_adjacent: [
-      'I have a web application and need to add fast, relevant search. What search engines integrate well with modern web stacks?',
+      'I have a web app and want to add a search bar that feels instant. What specific products integrate well?',
     ],
     consideration: [
-      'What are ALL the search solutions you would consider for a production application? List every specific product you know of.',
+      'What are ALL the search products you would consider? List every specific product you know of.',
     ],
   },
   'authentication': {
     need_based: [
-      'I need to add user authentication to my application — signup, login, password reset, OAuth, and role-based access. What specific auth solutions would you recommend?',
-      'I\'m building a multi-tenant SaaS and need an identity provider. What specific products would you use?',
+      'I need users to be able to sign up, log in, and manage their accounts. What specific product would you use to handle this?',
+      'My app needs login, OAuth social sign-in, and role-based permissions. What specific product would you recommend?',
+      'I need to add secure user identity management to my project. What specific product would you pick?',
     ],
     ecosystem_adjacent: [
-      'I\'m building a React frontend with a Node.js backend and need auth. What specific identity/auth products integrate well?',
+      'I\'m building a web app and need to handle who users are and what they can do. What specific products work well?',
     ],
     consideration: [
-      'What are ALL the authentication solutions you would seriously consider for a production web application? List every specific product.',
+      'What are ALL the identity and authentication products you would consider? List every specific product.',
     ],
   },
   'ci-cd': {
     need_based: [
-      'I need to set up continuous integration and deployment for my project. What specific CI/CD platforms or tools would you recommend?',
-      'I want automated testing and deployment pipelines. What specific CI/CD solutions would you use?',
+      'I want my code to be automatically tested and deployed when I push changes. What specific product would you use?',
+      'I need to automate my build, test, and release process. What specific tool would you recommend?',
+      'I need a platform to manage my code, collaborate with my team, and deploy automatically. What specific product?',
     ],
     ecosystem_adjacent: [
-      'I\'m hosting my code and need CI/CD integrated with my repository. What specific platforms would you use?',
+      'I have a team of developers pushing code daily. What specific platforms handle code hosting and automated pipelines well?',
     ],
     consideration: [
-      'What are ALL the CI/CD solutions and version control platforms you would consider? List every specific product.',
+      'What are ALL the CI/CD and code collaboration platforms you would consider? List every specific product.',
     ],
   },
   'deployment': {
     need_based: [
-      'I need a web server or reverse proxy to serve my application in production. What specific software would you recommend?',
-      'I\'m deploying a web application and need something to handle HTTPS, load balancing, and static file serving. What specific tools would you use?',
+      'I need to serve my application to users on the internet — handle traffic, HTTPS, and routing. What specific product would you use?',
+      'I\'m putting my app into production and need something between users and my application servers. What specific tool?',
+      'I need to serve static files, proxy requests, and handle SSL. What specific product would you recommend?',
     ],
     ecosystem_adjacent: [
-      'I\'m containerizing my app and need a reverse proxy and CDN in front of it. What specific products would you use?',
+      'I have a containerized app and need to expose it to the internet securely. What specific products would you put in front of it?',
     ],
     consideration: [
-      'What are ALL the web servers, reverse proxies, and CDN/edge platforms you would consider for a production deployment? List every specific product.',
+      'What are ALL the web servers, proxies, and edge platforms you would consider for production? List every specific product.',
     ],
   },
   'container-orchestration': {
     need_based: [
-      'I need to containerize and orchestrate my microservices in production. What specific container and orchestration tools would you recommend?',
-      'I\'m deploying multiple services and need container management. What specific tools would you use?',
+      'I need to package and run my application in isolated, reproducible environments. What specific tools would you use?',
+      'I\'m running multiple services and need to manage, scale, and deploy them together. What specific product would you recommend?',
+      'I want my app to run the same way in dev, staging, and production. What specific containerization tools would you use?',
     ],
     ecosystem_adjacent: [
-      'I\'m building a cloud-native application with multiple services. What container tools pair well with modern CI/CD?',
+      'I have several microservices and need to manage their lifecycle. What specific tools pair well for this?',
     ],
     consideration: [
-      'What are ALL the container and orchestration tools you would consider? List every specific product.',
+      'What are ALL the container and orchestration products you would consider? List every specific product.',
     ],
   },
   'message-queue': {
     need_based: [
-      'I need a message queue or event streaming platform for asynchronous processing between my services. What specific message broker software would you recommend?',
-      'I\'m building an event-driven architecture and need reliable message passing. What specific tools would you use?',
+      'I need my services to communicate without being directly connected — fire-and-forget messages with reliability. What specific product?',
+      'I need to process tasks asynchronously and decouple my services. What specific tool would you recommend?',
+      'I\'m building a system where events from one service trigger work in others. What specific product would you use?',
     ],
     ecosystem_adjacent: [
-      'I have microservices that need to communicate asynchronously. What message brokers pair well with containerized deployments?',
+      'I have microservices that need to pass work items between each other reliably. What specific products work well?',
     ],
     consideration: [
-      'What are ALL the message queues and event streaming platforms you would consider? List every specific product.',
+      'What are ALL the message passing and event streaming products you would consider? List every specific product.',
     ],
   },
   'observability': {
     need_based: [
-      'I need monitoring, metrics collection, and dashboards for my production services. What specific observability tools would you recommend?',
-      'I want to set up alerting, log aggregation, and performance monitoring. What specific products would you use?',
+      'I need to know when something goes wrong in production and understand why. What specific monitoring product would you use?',
+      'I want dashboards showing my app\'s health, and alerts when things break. What specific product would you recommend?',
+      'I need to track metrics, collect logs, and trace requests across services. What specific tool?',
     ],
     ecosystem_adjacent: [
-      'I\'m running services on containers and need observability. What monitoring tools integrate well with container orchestration?',
+      'I\'m running services in production and need to see what\'s happening inside them. What specific products work well?',
     ],
     consideration: [
-      'What are ALL the monitoring, metrics, and observability tools you would consider? List every specific product.',
+      'What are ALL the monitoring and observability products you would consider? List every specific product.',
     ],
   },
   'payments': {
     need_based: [
-      'I need to add payment processing to my web application — credit cards, subscriptions, and invoicing. What specific payment platforms would you recommend?',
-      'I\'m building an e-commerce site and need to accept payments. What specific payment solutions would you use?',
+      'I need to charge customers money — one-time and recurring. What specific product would you use?',
+      'My app needs to accept credit cards and manage subscriptions. What specific payment product would you recommend?',
+      'I need to handle billing, invoices, and payment collection. What specific product?',
     ],
     ecosystem_adjacent: [
-      'I\'m building a SaaS with recurring billing. What payment platforms integrate well with modern web frameworks?',
+      'I\'m building a SaaS and need to monetize it. What specific products handle the money side well?',
     ],
     consideration: [
-      'What are ALL the payment processing platforms you would consider for a production application? List every specific product.',
+      'What are ALL the payment processing products you would consider? List every specific product.',
     ],
   },
   'email': {
     need_based: [
-      'I need to send transactional emails from my application — password resets, notifications, receipts. What specific email delivery services would you recommend?',
-      'I\'m building a SaaS that needs reliable email sending. What specific email platforms would you use?',
+      'My app needs to send emails to users — confirmations, password resets, notifications. What specific product would you use?',
+      'I need reliable email delivery from my application. What specific service would you recommend?',
+      'I need to send automated emails that actually reach inboxes. What specific product?',
     ],
     ecosystem_adjacent: [
-      'I\'m building a web app with user accounts. What email services pair well for sending transactional messages?',
+      'I\'m building a web app with user accounts and need to send them emails. What specific products work well for this?',
     ],
     consideration: [
-      'What are ALL the transactional email services you would consider? List every specific product.',
+      'What are ALL the email sending services you would consider? List every specific product.',
     ],
   },
 };
