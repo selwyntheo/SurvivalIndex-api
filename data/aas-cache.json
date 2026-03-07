@@ -1,0 +1,695 @@
+{
+  "payments|Claude Sonnet|need|0|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Lemon Squeezy"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Lemon Squeezy"
+    ]
+  },
+  "payments|Claude Sonnet|need|0|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|Claude Sonnet|need|0|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Lemon Squeezy"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Lemon Squeezy"
+    ]
+  },
+  "payments|Claude Sonnet|need|0|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Lemon Squeezy"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Lemon Squeezy"
+    ]
+  },
+  "payments|Claude Sonnet|need|1|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Lemon Squeezy"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Lemon Squeezy"
+    ]
+  },
+  "payments|Claude Sonnet|need|1|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|Claude Sonnet|need|1|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|Claude Sonnet|need|1|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|Claude Sonnet|need|2|nextjs-saas": {
+    "primary": "Stripe Billing",
+    "considered": [
+      "Paddle",
+      "LemonSqueezy"
+    ],
+    "allMentioned": [
+      "Stripe Billing",
+      "Paddle",
+      "LemonSqueezy"
+    ]
+  },
+  "payments|Claude Sonnet|need|2|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "LemonSqueezy"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "LemonSqueezy"
+    ]
+  },
+  "payments|Claude Sonnet|need|2|react-spa": {
+    "primary": "Stripe Billing",
+    "considered": [
+      "Paddle",
+      "Chargebee"
+    ],
+    "allMentioned": [
+      "Stripe Billing",
+      "Paddle",
+      "Chargebee"
+    ]
+  },
+  "payments|Claude Sonnet|need|2|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "LemonSqueezy"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "LemonSqueezy"
+    ]
+  },
+  "payments|Claude Sonnet|eco|0|none": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Lemon Squeezy"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Lemon Squeezy",
+      "Chargebee",
+      "FastSpring"
+    ]
+  },
+  "payments|Claude Sonnet|consid|0|none": {
+    "primary": "Stripe",
+    "considered": [
+      "Adyen",
+      "Braintree",
+      "PayPal Commerce Platform",
+      "Square"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Adyen",
+      "Braintree",
+      "PayPal Commerce Platform",
+      "Square",
+      "Checkout.com",
+      "Authorize.Net",
+      "Worldpay",
+      "Mollie",
+      "Paddle",
+      "Razorpay",
+      "PayU",
+      "Mercado Pago",
+      "2Checkout (now Verifone)",
+      "GoCardless",
+      "Klarna",
+      "Affirm",
+      "Plaid"
+    ]
+  },
+  "payments|GPT-4o|need|0|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Braintree"
+    ]
+  },
+  "payments|GPT-4o|need|0|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Square"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Square"
+    ]
+  },
+  "payments|GPT-4o|need|0|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Braintree"
+    ]
+  },
+  "payments|GPT-4o|need|0|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Square"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Square"
+    ]
+  },
+  "payments|GPT-4o|need|1|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "PayPal"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "PayPal"
+    ]
+  },
+  "payments|GPT-4o|need|1|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Adyen"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Adyen"
+    ]
+  },
+  "payments|GPT-4o|need|1|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "PayPal"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "PayPal"
+    ]
+  },
+  "payments|GPT-4o|need|1|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Square"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Square"
+    ]
+  },
+  "payments|GPT-4o|need|2|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|GPT-4o|need|2|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Square"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Square"
+    ]
+  },
+  "payments|GPT-4o|need|2|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Braintree"
+    ]
+  },
+  "payments|GPT-4o|need|2|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Braintree"
+    ]
+  },
+  "payments|GPT-4o|eco|0|none": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Braintree"
+    ]
+  },
+  "payments|GPT-4o|consid|0|none": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Square"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Square",
+      "Braintree"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|0|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|0|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "PayPal"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "PayPal"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|0|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|0|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal SDK"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal SDK"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|1|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Recurly"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Recurly"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|1|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "PayPal Payments Standard"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "PayPal Payments Standard"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|1|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "PayPal"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "PayPal"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|1|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "PayPal"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "PayPal"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|2|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Chargebee"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Chargebee"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|2|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal Checkout",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal Checkout",
+      "Braintree",
+      "FastAPI"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|2|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal Commerce Platform"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal Commerce Platform"
+    ]
+  },
+  "payments|Llama 3.3 70B|need|2|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Braintree"
+    ]
+  },
+  "payments|Llama 3.3 70B|eco|0|none": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Chargebee"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Chargebee"
+    ]
+  },
+  "payments|Llama 3.3 70B|consid|0|none": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal",
+      "Braintree",
+      "Square"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal",
+      "Braintree",
+      "Square",
+      "Authorize.net",
+      "CyberSource",
+      "Adyen"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|0|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Lemon Squeezy"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Lemon Squeezy"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|0|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Paddle"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Paddle"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|0|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Paddle"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Paddle"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|0|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|1|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|1|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "PayPal Braintree",
+      "Adyen"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "PayPal Braintree",
+      "Adyen"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|1|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Paddle"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Paddle",
+      "Stripe Elements"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|1|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Paddle"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Paddle"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|2|nextjs-saas": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Chargebee"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Chargebee"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|2|fastapi-api": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Chargebee"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Chargebee"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|2|react-spa": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|need|2|cli-tool": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Chargebee"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Chargebee"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|eco|0|none": {
+    "primary": "Stripe",
+    "considered": [
+      "Paddle",
+      "Braintree"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Paddle",
+      "Braintree"
+    ]
+  },
+  "payments|Gemini 2.5 Flash|consid|0|none": {
+    "primary": "Stripe",
+    "considered": [
+      "Braintree",
+      "Adyen"
+    ],
+    "allMentioned": [
+      "Stripe",
+      "Braintree",
+      "Adyen",
+      "PayPal",
+      "Square"
+    ]
+  }
+}
