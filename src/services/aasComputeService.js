@@ -375,21 +375,40 @@ export async function computeRealAAS(options = {}) {
   // ─── Response cache ─────────────────────────────────────────────────
   // Saves raw extractions so re-scoring is free (no API calls).
   // Use --from-cache to re-score from saved responses.
+  // Cache is stored in both file (data/aas-cache.json) and DB (AasProbeCache).
   let cache = {};
   if (fromCache) {
-    if (!fs.existsSync(CACHE_PATH)) {
-      throw new Error(`Cache not found at ${CACHE_PATH}. Run without --from-cache first.`);
+    // Load from DB first, fall back to file
+    const dbCache = await prisma.aasProbeCache.findMany();
+    if (dbCache.length > 0) {
+      for (const row of dbCache) {
+        cache[row.cacheKey] = row.extraction;
+      }
+      console.log(`📦 Loaded ${dbCache.length} cached responses from database\n`);
+    } else if (fs.existsSync(CACHE_PATH)) {
+      cache = JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'));
+      console.log(`📦 Loaded ${Object.keys(cache).length} cached responses from file, migrating to DB...`);
+      // Migrate file cache to DB
+      for (const [key, extraction] of Object.entries(cache)) {
+        const [catId, modelLabel, promptType] = key.split('|');
+        await prisma.aasProbeCache.upsert({
+          where: { cacheKey: key },
+          create: { cacheKey: key, categoryId: catId, modelLabel, promptType, extraction },
+          update: { extraction },
+        });
+      }
+      console.log(`📦 Migrated ${Object.keys(cache).length} entries to DB\n`);
+    } else {
+      throw new Error('No cache found in DB or file. Run without --from-cache first.');
     }
-    cache = JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'));
-    console.log(`📦 Loaded ${Object.keys(cache).length} cached responses from ${CACHE_PATH}\n`);
   }
 
-  function cacheKey(categoryId, modelLabel, promptType, promptIdx, repoId) {
+  function makeCacheKey(categoryId, modelLabel, promptType, promptIdx, repoId) {
     return `${categoryId}|${modelLabel}|${promptType}|${promptIdx}|${repoId || 'none'}`;
   }
 
   async function cachedProbe(categoryId, modelConfig, promptType, promptIdx, prompt, repoContext) {
-    const key = cacheKey(categoryId, modelConfig.label, promptType, promptIdx, repoContext?.id);
+    const key = makeCacheKey(categoryId, modelConfig.label, promptType, promptIdx, repoContext?.id);
     if (fromCache) {
       return cache[key] || null;
     }
@@ -512,8 +531,20 @@ export async function computeRealAAS(options = {}) {
 
     // Save cache after each category (incremental, survives crashes)
     if (!fromCache) {
+      // Save to file
       fs.mkdirSync(path.dirname(CACHE_PATH), { recursive: true });
       fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2));
+
+      // Save to DB (upsert each probe for this category)
+      const categoryKeys = Object.keys(cache).filter(k => k.startsWith(categoryId + '|'));
+      for (const key of categoryKeys) {
+        const [catId, modelLabel, promptType] = key.split('|');
+        await prisma.aasProbeCache.upsert({
+          where: { cacheKey: key },
+          create: { cacheKey: key, categoryId: catId, modelLabel, promptType, extraction: cache[key] },
+          update: { extraction: cache[key] },
+        });
+      }
     }
 
     // ─── Save scores for this category immediately ───

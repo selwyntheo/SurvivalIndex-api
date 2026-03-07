@@ -554,3 +554,16 @@ model AasScore {
   @@index([aas])
   @@index([computedAt])
 }
+
+model AasProbeCache {
+  id              String    @id @default(uuid())
+  cacheKey        String    @unique  // category|model|promptType|promptIdx|repoContext
+  categoryId      String
+  modelLabel      String
+  promptType      String             // need, eco, consid
+  extraction      Json?              // { primary, considered, allMentioned }
+  createdAt       DateTime  @default(now())
+
+  @@index([categoryId])
+  @@index([modelLabel])
+}
