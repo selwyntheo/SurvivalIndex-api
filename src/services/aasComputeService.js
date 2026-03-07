@@ -1,10 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import prisma from '../config/database.js';
 import { CATEGORY_MAP, PROMPT_WEIGHTS, classifyHiddenGem } from './aasConstants.js';
 
 dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const CACHE_PATH = path.join(__dirname, '..', '..', 'data', 'aas-cache.json');
 
 // ─── Multi-provider model clients ────────────────────────────────────
 
@@ -342,7 +348,7 @@ function matchTools(extraction, projectsByCategory) {
  * This is the main entry point.
  */
 export async function computeRealAAS(options = {}) {
-  const { dryRun = false, categories = null } = options;
+  const { dryRun = false, categories = null, fromCache = false } = options;
 
   // Determine which models can run (have API keys)
   const activeModels = MODEL_CONFIGS.filter(m => providers[m.provider]);
@@ -366,13 +372,39 @@ export async function computeRealAAS(options = {}) {
     ? Object.keys(CATEGORY_PROMPTS).filter(c => categories.includes(c))
     : Object.keys(CATEGORY_PROMPTS);
 
+  // ─── Response cache ─────────────────────────────────────────────────
+  // Saves raw extractions so re-scoring is free (no API calls).
+  // Use --from-cache to re-score from saved responses.
+  let cache = {};
+  if (fromCache) {
+    if (!fs.existsSync(CACHE_PATH)) {
+      throw new Error(`Cache not found at ${CACHE_PATH}. Run without --from-cache first.`);
+    }
+    cache = JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'));
+    console.log(`📦 Loaded ${Object.keys(cache).length} cached responses from ${CACHE_PATH}\n`);
+  }
+
+  function cacheKey(categoryId, modelLabel, promptType, promptIdx, repoId) {
+    return `${categoryId}|${modelLabel}|${promptType}|${promptIdx}|${repoId || 'none'}`;
+  }
+
+  async function cachedProbe(categoryId, modelConfig, promptType, promptIdx, prompt, repoContext) {
+    const key = cacheKey(categoryId, modelConfig.label, promptType, promptIdx, repoContext?.id);
+    if (fromCache) {
+      return cache[key] || null;
+    }
+    const extraction = await probeModel(modelConfig, prompt, repoContext);
+    cache[key] = extraction;
+    return extraction;
+  }
+
   console.log(`\n=== AAS Computation ===`);
   console.log(`Categories: ${categoriesToProcess.length}`);
   console.log(`Models: ${activeModels.map(m => m.label).join(', ')}`);
   console.log(`Repo contexts: ${REPO_CONTEXTS.length}`);
-  console.log(`Dry run: ${dryRun}\n`);
+  console.log(`Mode: ${fromCache ? 'FROM CACHE (no API calls)' : dryRun ? 'DRY RUN' : 'LIVE'}\n`);
 
-  if (activeModels.length < 4) {
+  if (!fromCache && activeModels.length < 4) {
     const missing = MODEL_CONFIGS.filter(m => !providers[m.provider]);
     console.log(`⚠ Missing keys for: ${missing.map(m => `${m.label} (${m.provider.toUpperCase()}_API_KEY)`).join(', ')}\n`);
   }
@@ -401,7 +433,7 @@ export async function computeRealAAS(options = {}) {
           ecoPicks: 0, ecoTotal: 0,
           considMentions: 0, considTotal: 0,
           repoTypes: new Set(),
-          modelResults: {}, // { [label]: { needPicks, needTotal, ecoPicks, ecoTotal, considPicks, considTotal } }
+          modelResults: {},
         };
       }
       return catStats[id];
@@ -416,9 +448,9 @@ export async function computeRealAAS(options = {}) {
 
     for (const modelConfig of activeModels) {
       // Need-based prompts (with repo context variation)
-      for (const prompt of prompts.need_based) {
+      for (let pi = 0; pi < prompts.need_based.length; pi++) {
         for (const repo of REPO_CONTEXTS) {
-          const extraction = await probeModel(modelConfig, prompt, repo);
+          const extraction = await cachedProbe(categoryId, modelConfig, 'need', pi, prompts.need_based[pi], repo);
           totalCalls++;
           const matches = matchTools(extraction, projectsByCategory);
 
@@ -442,8 +474,8 @@ export async function computeRealAAS(options = {}) {
       }
 
       // Ecosystem-adjacent prompts
-      for (const prompt of (prompts.ecosystem_adjacent || [])) {
-        const extraction = await probeModel(modelConfig, prompt, null);
+      for (let pi = 0; pi < (prompts.ecosystem_adjacent || []).length; pi++) {
+        const extraction = await cachedProbe(categoryId, modelConfig, 'eco', pi, prompts.ecosystem_adjacent[pi], null);
         totalCalls++;
         const matches = matchTools(extraction, projectsByCategory);
 
@@ -460,8 +492,8 @@ export async function computeRealAAS(options = {}) {
       }
 
       // Consideration prompts
-      for (const prompt of (prompts.consideration || [])) {
-        const extraction = await probeModel(modelConfig, prompt, null);
+      for (let pi = 0; pi < (prompts.consideration || []).length; pi++) {
+        const extraction = await cachedProbe(categoryId, modelConfig, 'consid', pi, prompts.consideration[pi], null);
         totalCalls++;
         const matches = matchTools(extraction, projectsByCategory);
 
@@ -476,6 +508,12 @@ export async function computeRealAAS(options = {}) {
           }
         }
       }
+    }
+
+    // Save cache after each category (incremental, survives crashes)
+    if (!fromCache) {
+      fs.mkdirSync(path.dirname(CACHE_PATH), { recursive: true });
+      fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2));
     }
 
     // ─── Save scores for this category immediately ───

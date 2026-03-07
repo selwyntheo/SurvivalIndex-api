@@ -45,4 +45,4 @@ apps/*/build
 # Misc
 requirements/
 .cache
-.temp
+.tempdata/
