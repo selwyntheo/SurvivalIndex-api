@@ -303,6 +303,8 @@ function normalizeName(name) {
 
 /**
  * Match extracted tool names against known projects in a category.
+ * Uses exact-first, then longest-substring matching to avoid
+ * "GitHub" swallowing "GitHub Actions".
  */
 function matchTools(extraction, projectsByCategory) {
   if (!extraction) return { primaryMatch: null, consideredMatches: [], allMatches: [] };
@@ -310,11 +312,22 @@ function matchTools(extraction, projectsByCategory) {
   const allProjects = Object.values(projectsByCategory).flat();
 
   function findMatch(name) {
+    if (!name) return null;
     const norm = normalizeName(name);
-    return allProjects.find(p => {
+    if (!norm) return null;
+
+    // 1. Exact match first
+    const exact = allProjects.find(p => normalizeName(p.name) === norm);
+    if (exact) return exact;
+
+    // 2. Substring match — prefer longest match to avoid "github" matching before "githubactions"
+    const candidates = allProjects.filter(p => {
       const pNorm = normalizeName(p.name);
-      return pNorm === norm || norm.includes(pNorm) || pNorm.includes(norm);
-    }) || null;
+      return norm.includes(pNorm) || pNorm.includes(norm);
+    });
+    if (candidates.length === 0) return null;
+    // Return the candidate whose normalized name is longest (most specific match)
+    return candidates.sort((a, b) => normalizeName(b.name).length - normalizeName(a.name).length)[0];
   }
 
   return {
@@ -388,10 +401,17 @@ export async function computeRealAAS(options = {}) {
           ecoPicks: 0, ecoTotal: 0,
           considMentions: 0, considTotal: 0,
           repoTypes: new Set(),
-          modelResults: {},
+          modelResults: {}, // { [label]: { needPicks, needTotal, ecoPicks, ecoTotal, considPicks, considTotal } }
         };
       }
       return catStats[id];
+    }
+
+    function ensureModelResult(stats, label) {
+      if (!stats.modelResults[label]) {
+        stats.modelResults[label] = { needPicks: 0, needTotal: 0, ecoPicks: 0, ecoTotal: 0, considPicks: 0, considTotal: 0 };
+      }
+      return stats.modelResults[label];
     }
 
     for (const modelConfig of activeModels) {
@@ -404,14 +424,14 @@ export async function computeRealAAS(options = {}) {
 
           for (const p of categoryProjects) {
             const stats = ensureCatTool(p.id);
+            const mr = ensureModelResult(stats, modelConfig.label);
             stats.needTotal++;
-            if (!stats.modelResults[modelConfig.label]) stats.modelResults[modelConfig.label] = { picks: 0, total: 0 };
-            stats.modelResults[modelConfig.label].total++;
+            mr.needTotal++;
 
             if (matches.primaryMatch?.id === p.id) {
               stats.needPicks++;
+              mr.needPicks++;
               stats.repoTypes.add(repo.id);
-              stats.modelResults[modelConfig.label].picks++;
             }
           }
 
@@ -429,9 +449,12 @@ export async function computeRealAAS(options = {}) {
 
         for (const p of categoryProjects) {
           const stats = ensureCatTool(p.id);
+          const mr = ensureModelResult(stats, modelConfig.label);
           stats.ecoTotal++;
+          mr.ecoTotal++;
           if (matches.primaryMatch?.id === p.id || matches.consideredMatches.some(m => m.id === p.id)) {
             stats.ecoPicks++;
+            mr.ecoPicks++;
           }
         }
       }
@@ -444,9 +467,12 @@ export async function computeRealAAS(options = {}) {
 
         for (const p of categoryProjects) {
           const stats = ensureCatTool(p.id);
+          const mr = ensureModelResult(stats, modelConfig.label);
           stats.considTotal++;
+          mr.considTotal++;
           if (matches.allMatches.some(m => m.id === p.id)) {
             stats.considMentions++;
+            mr.considPicks++;
           }
         }
       }
@@ -472,17 +498,28 @@ export async function computeRealAAS(options = {}) {
       const contextBreadth = stats.repoTypes.size;
 
       const modelEntries = Object.entries(stats.modelResults);
-      const knowingModels = modelEntries.filter(([, r]) => r.total > 0 && (r.picks / r.total) >= 0.3).length;
-      const crossModelConsistency = modelEntries.length > 0 ? knowingModels / modelEntries.length : 0;
+
+      // Per-model weighted composite (same formula as overall AAS)
+      const modelScores = modelEntries.map(([modelLabel, r]) => {
+        const mNeedRate = r.needTotal > 0 ? r.needPicks / r.needTotal : 0;
+        const mEcoRate = r.ecoTotal > 0 ? r.ecoPicks / r.ecoTotal : 0;
+        const mConsidRate = r.considTotal > 0 ? r.considPicks / r.considTotal : 0;
+        const mComposite =
+          mNeedRate * PROMPT_WEIGHTS.need_based +
+          mEcoRate * PROMPT_WEIGHTS.ecosystem_adjacent +
+          mConsidRate * PROMPT_WEIGHTS.consideration;
+        return {
+          modelId: modelLabel,
+          pickRate: mComposite,
+          knowsTool: mComposite >= 0.3,
+        };
+      });
+
+      const knowingModels = modelScores.filter(m => m.knowsTool).length;
+      const crossModelConsistency = modelScores.length > 0 ? knowingModels / modelScores.length : 0;
 
       const totalDataPoints = stats.needTotal + stats.ecoTotal + stats.considTotal;
       const confidence = totalDataPoints >= 50 ? 0.8 : totalDataPoints >= 20 ? 0.5 : 0.3;
-
-      const modelScores = modelEntries.map(([modelLabel, r]) => ({
-        modelId: modelLabel,
-        pickRate: r.total > 0 ? r.picks / r.total : 0,
-        knowsTool: r.total > 0 && (r.picks / r.total) >= 0.3,
-      }));
 
       const result = {
         toolId, toolName: project.name, categoryId, aas,
